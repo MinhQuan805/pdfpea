@@ -1,41 +1,8 @@
 {
-  "name": "pdf-editor-vue",
+  "name": "pdfpea",
   "version": "1.0.0",
+  "private": true,
   "description": "A browser-based PDF editor built with Vue 3 and vanilla JavaScript",
-  "type": "module",
-  "main": "src/main.js",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build --debug && ls -la && ls -la dist",
-    "preview": "vite preview",
-    "serve": "vite preview --port 8000",
-    "lint": "eslint src --ext .js,.vue --fix",
-    "format": "prettier --write src/",
-    "type-check": "vue-tsc --noEmit"
-  },
-  "dependencies": {
-    "@tailwindcss/vite": "^4.1.11",
-    "moveable": "^0.53.0",
-    "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "5.4.449",
-    "svgpath": "^2.6.0",
-    "tailwindcss": "^4.1.11",
-    "vue": "^3.4.0"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-vue": "^5.0.0",
-    "eslint": "^8.57.0",
-    "eslint-plugin-vue": "^9.0.0",
-    "prettier": "^3.0.0",
-    "terser": "^5.26.0",
-    "typescript": "^5.0.0",
-    "vite": "^5.0.0",
-    "vue-tsc": "^1.8.0"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
-  },
   "keywords": [
     "pdf",
     "editor",
@@ -44,14 +11,50 @@
     "forms",
     "annotations"
   ],
-  "author": "",
-  "license": "MIT",
+  "homepage": "https://github.com/AlphaCloudTechnologies/pdfpea",
+  "bugs": {
+    "url": "https://github.com/AlphaCloudTechnologies/pdfpea/issues"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/user/pdf-editor-vue.git"
+    "url": "git+https://github.com/AlphaCloudTechnologies/pdfpea.git"
   },
-  "bugs": {
-    "url": "https://github.com/user/pdf-editor-vue/issues"
+  "license": "MIT",
+  "author": "AlphaCloudTechnologies",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=11.0.0"
   },
-  "homepage": "https://github.com/user/pdf-editor-vue#readme"
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --debug",
+    "preview": "vite preview",
+    "type-check": "vue-tsc --build",
+    "lint": "eslint . --fix --cache",
+    "format": "prettier --write --experimental-cli src/"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "4.1.17",
+    "moveable": "0.53.0",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "5.4.449",
+    "svgpath": "2.6.0",
+    "tailwindcss": "4.1.17",
+    "vue": "3.5.25"
+  },
+  "devDependencies": {
+    "@tsconfig/node24": "24.0.3",
+    "@types/node": "24.10.1",
+    "@vitejs/plugin-vue": "6.0.2",
+    "@vue/eslint-config-prettier": "10.2.0",
+    "@vue/eslint-config-typescript": "14.6.0",
+    "@vue/tsconfig": "0.8.1",
+    "eslint": "9.39.1",
+    "eslint-plugin-vue": "10.6.2",
+    "prettier": "3.7.3",
+    "typescript": "5.9.3",
+    "vite": "7.2.6",
+    "vue-tsc": "3.1.5"
+  }
 }

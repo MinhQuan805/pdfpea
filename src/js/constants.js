@@ -15,73 +15,73 @@ export const DEFAULT_VALUES = {
   BORDER_WIDTH: 2,
   TEXT_FIELD_BORDER_WIDTH: 1,
   X_PADDING: 2,
-  Y_PADDING: 5
+  Y_PADDING: 5,
 };
 
 // Colors
 export const COLORS = {
-  WHITE: '#FFFFFF',
-  RED: '#FF0000',
-  BLACK: '#000000',
-  LIGHT_BLUE: '#ADD8E6'
+  WHITE: "#FFFFFF",
+  RED: "#FF0000",
+  BLACK: "#000000",
+  LIGHT_BLUE: "#ADD8E6",
 };
 
 // Font families
 export const FONTS = {
-  HELVETICA: 'Helvetica',
-  COURIER: 'Courier', 
-  TIMES_ROMAN: 'TimesRoman'
+  HELVETICA: "Helvetica",
+  COURIER: "Courier",
+  TIMES_ROMAN: "TimesRoman",
 };
 
 // Field types
 export const FIELD_TYPES = {
-  TEXT_FIELD: 'Tx',
-  BUTTON: 'Btn'
+  TEXT_FIELD: "Tx",
+  BUTTON: "Btn",
 };
 
 // Alignment options
 export const ALIGNMENT = {
-  LEFT: 'Left',
-  CENTER: 'Center', 
-  RIGHT: 'Right'
+  LEFT: "Left",
+  CENTER: "Center",
+  RIGHT: "Right",
 };
 
 // Operation types
 export const OPERATION_TYPES = {
-  CREATE: 'create',
-  UPDATE: 'update'
+  CREATE: "create",
+  UPDATE: "update",
 };
 
 // Component types
 export const COMPONENT_TYPES = {
-  TEXT: 'text',
-  IMAGE: 'image',
-  RECTANGLE: 'rectangle',
-  CIRCLE: 'circle',
-  TEXT_FIELD: 'textfield',
-  CHECKBOX: 'checkbox',
-  LINK: 'link'
+  TEXT: "text",
+  IMAGE: "image",
+  RECTANGLE: "rectangle",
+  CIRCLE: "circle",
+  TEXT_FIELD: "textfield",
+  CHECKBOX: "checkbox",
+  LINK: "link",
 };
 
 // Events
 export const EVENTS = {
-  COMPONENT_SELECTED: 'pdfeditor.componentSelected',
-  COMPONENT_DRAGGING: 'pdfeditor.componentDragging',
-  COMPONENT_RESIZING: 'pdfeditor.componentResizing',
-  SHOULD_CLEAR_ALL_SELECTION: 'pdfeditor.shouldClearAllSelection'
+  COMPONENT_SELECTED: "pdfeditor.componentSelected",
+  COMPONENT_DRAGGING: "pdfeditor.componentDragging",
+  COMPONENT_RESIZING: "pdfeditor.componentResizing",
+  SHOULD_CLEAR_ALL_SELECTION: "pdfeditor.shouldClearAllSelection",
 };
 
 // Image paths
 export const IMAGE_PATHS = {
-  DEFAULT_IMAGE: '/images/default_image.jpg',
-  CHECKBOX_CHECKED: '/images/checkbox-checked.png',
-  CHECKBOX_UNCHECKED: '/images/checkbox-unchecked.png',
-  SVG_TICK: '/images/tick.svg',
-  SVG_CROSS: '/images/cross.svg'
+  DEFAULT_IMAGE: "/images/default_image.jpg",
+  CHECKBOX_CHECKED: "/images/checkbox-checked.png",
+  CHECKBOX_UNCHECKED: "/images/checkbox-unchecked.png",
+  SVG_TICK: "/images/tick.svg",
+  SVG_CROSS: "/images/cross.svg",
 };
 
 // Image file signatures
 export const IMAGE_SIGNATURES = {
-  JPG: [0xFF, 0xD8],
-  PNG: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+  JPG: [0xff, 0xd8],
+  PNG: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
 };

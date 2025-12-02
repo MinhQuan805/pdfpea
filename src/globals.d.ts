@@ -6,10 +6,10 @@ declare global {
     pdfjsLib: any;
     Moveable: any;
   }
-  
+
   const PDFLib: any;
   const pdfjsLib: any;
   const Moveable: any;
 }
 
-export {}
+export {};
