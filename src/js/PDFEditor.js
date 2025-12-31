@@ -22,7 +22,7 @@ import {
 class PDFEditor {
   container = null;
   pdfPages = [];
-
+  totalPages = 0;
   constructor(container) {
     this.container = container;
   }
@@ -35,6 +35,7 @@ class PDFEditor {
         const pdfDoc = await pdfjsLib.getDocument({ data: fileContents }).promise;
         const promises = [];
 
+        this.totalPages = pdfDoc.numPages;
         for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
           const promise = await pdfDoc.getPage(pageNum).then(async () => {
             const pdfURL = fileName;
