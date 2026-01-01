@@ -29,7 +29,7 @@ const DEFAULT_PDFJS_DOCUMENT_OPTIONS = {
 class PDFEditor {
   container = null;
   pdfPages = [];
-
+  totalPages = 0;
   constructor(container) {
     this.container = container;
   }
@@ -45,6 +45,7 @@ class PDFEditor {
         }).promise;
         const promises = [];
 
+        this.totalPages = pdfDoc.numPages;
         for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
           const promise = await pdfDoc.getPage(pageNum).then(async () => {
             const pdfURL = fileName;

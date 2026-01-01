@@ -116,7 +116,16 @@
               <option value="3.0">300%</option>
             </select>
           </div>
-
+          <!-- Pagination -->
+          <div class="option-element">
+            <PaginationBar
+              :currentPage="currentPage"
+              :totalPages="totalPages"
+              @prev-page="goToPrevPage"
+              @next-page="goToNextPage"
+              @go-to-page="goToPage"
+            />
+          </div>
           <!-- Freehand tool options -->
           <template v-if="selectedTool === 'freehand'">
             <div class="option-element">
@@ -797,6 +806,7 @@ import { ref, onMounted, nextTick, watch } from "vue";
 import { PDFEditor } from "./js/PDFEditor.js";
 import ImageDialog from "./components/ImageDialog.vue";
 import LinkDialog from "./components/LinkDialog.vue";
+import PaginationBar from "./components/PaginationBar.vue";
 import { freehandDrawing } from "./utils/FreehandDrawing.js";
 
 export default {
@@ -804,6 +814,7 @@ export default {
   components: {
     ImageDialog,
     LinkDialog,
+    PaginationBar,
   },
   setup() {
     console.log("Vue setup() function called - this means Vue is working");
@@ -816,7 +827,8 @@ export default {
     const counter = ref(0);
     const zoomLevel = ref(1.5);
     const selectedTool = ref("select");
-
+    const currentPage = ref(0);
+    const totalPages = ref(0);
     // Icon cache for base64 encoded SVGs
     const iconCache = ref({});
 
@@ -1811,6 +1823,10 @@ export default {
           clearPdfPages();
           isLoaded.value = true;
           await pdfEditor.renderPDF("", e.target.result).then(() => {
+            // Update pagination
+            totalPages.value = pdfEditor.totalPages;
+            currentPage.value = 1;
+
             pdfEditor.applyZoom(zoomLevel.value);
             // Setup drawing listeners after PDF is rendered
             setupCanvasDrawingListeners();
@@ -2388,7 +2404,6 @@ export default {
         console.log("Creating PDFEditor with container:", pdfViewContainer.value);
         try {
           pdfEditor = new PDFEditor(pdfViewContainer.value);
-
           document.addEventListener("pdfeditor.componentSelected", uploadPropertyPanel);
           document.addEventListener("pdfeditor.componentDragging", uploadPropertyPanel);
           document.addEventListener("pdfeditor.componentResizing", uploadPropertyPanel);
@@ -2493,6 +2508,25 @@ export default {
           }
         }
       });
+
+      const bodyPdf = document.querySelector(".body-pdf-view");
+      if (bodyPdf) {
+        let scrollTimeout = null;
+        bodyPdf.addEventListener("scroll", () => {
+          if (scrollTimeout) clearTimeout(scrollTimeout);
+          scrollTimeout = setTimeout(() => {
+            const centerY = bodyPdf.scrollTop + bodyPdf.clientHeight / 2;
+            const page = pdfEditor.pdfPages.findIndex((p) => {
+              const el = p.container;
+              if (!el) return false;
+              return el.offsetTop <= centerY && el.offsetTop + el.offsetHeight >= centerY;
+            });
+            if (page !== -1) {
+              currentPage.value = page + 1;
+            }
+          }, 200);
+        });
+      }
     });
 
     const setupTooltipPositioning = () => {
@@ -2764,6 +2798,29 @@ export default {
       }
     };
 
+    // Pagination state
+    const goToPage = (pageNum) => {
+      if (!pdfEditor || !pdfEditor.totalPages) return;
+      if (pageNum < 1) pageNum = 1;
+      if (pageNum > pdfEditor.totalPages) pageNum = pdfEditor.totalPages;
+      currentPage.value = pageNum;
+      const page = pdfEditor.pdfPages[pageNum - 1];
+      if (page && page.container) {
+        page.container.scrollIntoView();
+        const pdfSelector = document.querySelector(".pdf-editor");
+        if (pdfSelector) {
+          pdfSelector.scrollIntoView();
+        }
+      }
+    };
+
+    const goToPrevPage = () => {
+      goToPage(currentPage.value - 1);
+    };
+    const goToNextPage = () => {
+      goToPage(currentPage.value + 1);
+    };
+
     return {
       pdfViewContainer,
       file,
@@ -2831,6 +2888,11 @@ export default {
       createMeasurementOverlay,
       addMeasurementOverlay,
       scrollToEditor,
+      currentPage,
+      totalPages,
+      goToPrevPage,
+      goToNextPage,
+      goToPage,
     };
   },
 };
