@@ -1252,3 +1252,197 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+@reference "../css/tailwind.css";
+.pdf-organizer {
+  @apply bg-transparent;
+
+  .organize-body {
+    @apply flex relative w-full p-4 pt-0;
+    height: calc(100vh - 60px);
+  }
+
+  .pages-grid {
+    @apply grid gap-5 w-full;
+  }
+
+  .page-card-wrapper {
+    @apply relative flex items-center;
+  }
+
+  .page-card {
+    @apply relative bg-white border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 flex-1;
+
+    &:hover {
+      @apply shadow-md;
+
+      .page-hover-actions {
+        @apply opacity-100 pointer-events-auto;
+      }
+    }
+
+    &.selected {
+      @apply shadow-lg ring-4;
+    }
+
+    .page-thumbnail {
+      @apply relative mb-4 bg-gray-50 rounded overflow-hidden flex items-center justify-center aspect-[1/1.414];
+
+      .page-canvas {
+        @apply max-w-full max-h-full object-contain;
+      }
+
+      .page-number-badge {
+        @apply absolute top-2 right-2 text-white px-2 py-1 rounded text-sm font-semibold;
+      }
+    }
+
+    .current-number {
+      @apply absolute bottom-2 left-1/2 -translate-x-1/2 text-gray-700 rounded text-xs font-semibold;
+    }
+
+    .page-hover-actions {
+      @apply absolute -top-4 right-1 flex opacity-0 pointer-events-none transition-opacity duration-200 ease-in z-10;
+
+      .page-action-btn {
+        @apply bg-white text-gray-700 border border-gray-300 rounded-sm w-7 h-7 flex items-center justify-center cursor-pointer transition-all duration-200 shadow-sm;
+
+        &:hover {
+          @apply bg-gray-100 border-gray-400 shadow-md;
+        }
+
+        &:active {
+          @apply scale-95;
+        }
+
+        i {
+          @apply text-sm;
+        }
+      }
+    }
+  }
+
+  .add-blank-page-btn {
+    @apply text-white rounded-full w-7 h-7 ml-4 flex items-center justify-center cursor-pointer transition-all shadow-md opacity-0 pointer-events-none scale-100;
+  }
+
+  .add-blank-page-btn i {
+    @apply text-base;
+  }
+
+  .page-card-wrapper:hover .add-blank-page-btn {
+    @apply opacity-100 pointer-events-auto;
+  }
+
+  .page-card-wrapper .add-blank-page-btn:hover {
+    @apply shadow-lg scale-110;
+  }
+
+  .page-card-wrapper .add-blank-page-btn:active {
+    @apply scale-95;
+  }
+}
+
+.preview-modal-overlay {
+  @apply fixed inset-0 z-10002 flex items-center justify-center bg-black/85 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out];
+
+  .preview-close-btn {
+    @apply absolute top-4 right-6 text-white text-4xl cursor-pointer hover:text-gray-300 transition-colors z-10002 bg-transparent border-none;
+  }
+
+  .preview-content {
+    @apply flex items-center justify-center w-full h-full p-4 relative;
+
+    .preview-canvas-wrapper {
+      @apply relative shadow-2xl max-h-[95vh] max-w-[95vw] rounded-sm overflow-hidden flex flex-col items-center;
+
+      .preview-image-container {
+        @apply relative;
+      }
+
+      .preview-canvas {
+        @apply block object-contain max-h-[85vh] w-auto;
+      }
+    }
+  }
+
+  .zoom-lens {
+    @apply absolute border-2 border-white cursor-none z-10 shadow-[0_0_0_2px_rgba(0,0,0,0.3)] pointer-events-none;
+  }
+
+  .zoom-result {
+    @apply fixed border-2 border-white w-[200px] h-[200px] z-100 rounded shadow-2xl pointer-events-none;
+  }
+
+  .preview-controls {
+    @apply bg-white px-4 py-2 mt-2 text-center text-sm font-medium flex items-center justify-center gap-2 rounded-xs;
+
+    .preview-control-btn {
+      @apply bg-transparent text-black w-8 h-8 rounded flex items-center justify-center cursor-pointer transition-all border-none hover:bg-gray-100;
+
+      &:disabled {
+        @apply opacity-30 cursor-not-allowed hover:bg-transparent;
+      }
+      &.active {
+        @apply bg-gray-200 hover:bg-gray-300;
+      }
+    }
+
+    .preview-divider {
+      @apply w-px h-6 bg-gray-300 mx-1;
+    }
+    .preview-page-info {
+      @apply text-sm font-medium min-w-[60px] text-center;
+    }
+  }
+}
+
+/* Specific cursor for tool */
+.organize-body[data-tool="delete"] .page-card {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/%3E%3C/svg%3E")
+      16 16,
+    auto;
+}
+
+.organize-body[data-tool="rotate"] .page-card {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M15.55 5.55L11 1v3.07C7.06 4.56 4 7.92 4 12s3.05 7.44 7 7.93v-2.02c-2.84-.48-5-2.94-5-5.91s2.16-5.43 5-5.91V10l4.55-4.45zM19.93 11c-.17-1.39-.72-2.73-1.62-3.89l-1.42 1.42c.54.75.88 1.6 1.02 2.47h2.02zM13 17.9v2.02c1.39-.17 2.74-.71 3.9-1.61l-1.44-1.44c-.75.54-1.59.89-2.46 1.03zm3.89-2.42l1.42 1.41c.9-1.16 1.45-2.5 1.62-3.89h-2.02c-.14.87-.48 1.72-1.02 2.48z'/%3E%3C/svg%3E")
+      16 16,
+    auto;
+}
+
+.organize-body[data-tool="duplicate"] .page-card {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z'/%3E%3C/svg%3E")
+      16 16,
+    auto;
+}
+
+.organize-body[data-tool="swap"] .page-card {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%236366f1' d='M9 3L5 6.99h3V14h2V6.99h3L9 3zm7 14.01V10h-2v7.01h-3L15 21l4-3.99h-3z'/%3E%3C/svg%3E")
+      16 16,
+    auto;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .pages-grid {
+    @apply grid-cols-[repeat(auto-fill,minmax(150px,1fr))]! gap-3;
+  }
+
+  .organize-body {
+    @apply p-2;
+  }
+}
+</style>

@@ -337,35 +337,6 @@ body {
     auto;
 }
 
-/* Sepecific */
-.organize-body[data-tool="delete"] .page-card {
-  cursor:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/%3E%3C/svg%3E")
-      16 16,
-    auto;
-}
-
-.organize-body[data-tool="rotate"] .page-card {
-  cursor:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M15.55 5.55L11 1v3.07C7.06 4.56 4 7.92 4 12s3.05 7.44 7 7.93v-2.02c-2.84-.48-5-2.94-5-5.91s2.16-5.43 5-5.91V10l4.55-4.45zM19.93 11c-.17-1.39-.72-2.73-1.62-3.89l-1.42 1.42c.54.75.88 1.6 1.02 2.47h2.02zM13 17.9v2.02c1.39-.17 2.74-.71 3.9-1.61l-1.44-1.44c-.75.54-1.59.89-2.46 1.03zm3.89-2.42l1.42 1.41c.9-1.16 1.45-2.5 1.62-3.89h-2.02c-.14.87-.48 1.72-1.02 2.48z'/%3E%3C/svg%3E")
-      16 16,
-    auto;
-}
-
-.organize-body[data-tool="duplicate"] .page-card {
-  cursor:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z'/%3E%3C/svg%3E")
-      16 16,
-    auto;
-}
-
-.organize-body[data-tool="swap"] .page-card {
-  cursor:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%236366f1' d='M9 3L5 6.99h3V14h2V6.99h3L9 3zm7 14.01V10h-2v7.01h-3L15 21l4-3.99h-3z'/%3E%3C/svg%3E")
-      16 16,
-    auto;
-}
-
 /* PDF pages */
 .pdf-page {
   margin-bottom: 20px;
@@ -548,25 +519,6 @@ h3 {
   }
 }
 
-.dialog-close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: #666;
-  cursor: pointer;
-  padding: 0;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-}
-
-.dialog-close-btn:hover {
-  background-color: #e0e0e0;
-}
 
 .tab-btn {
   padding: 10px 20px;
@@ -757,61 +709,6 @@ h3 {
   pointer-events: none;
 }
 
-/* Link Dialog Styles */
-.link-dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 10000;
-}
-
-.link-dialog {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  width: 90%;
-  max-width: 450px;
-  max-height: 70vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.link-dialog-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
-  background: #f8f9fa;
-}
-
-.link-dialog-header h3 {
-  margin: 0;
-  color: #333;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.link-dialog-content {
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-}
-
-.link-dialog-tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
 .link-url-section,
 .link-page-section {
   margin-bottom: 20px;
@@ -852,15 +749,6 @@ h3 {
 .link-error p {
   margin: 0;
   font-size: 14px;
-}
-
-.link-dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 20px;
-  border-top: 1px solid #e0e0e0;
-  background: #f8f9fa;
 }
 
 /* Measurement Tool Styles */

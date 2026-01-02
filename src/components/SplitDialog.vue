@@ -245,8 +245,37 @@ export default {
 };
 </script>
 
-<style>
+<style scoped>
 @reference "../css/tailwind.css";
+/* Form Components */
+.input-label {
+  @apply flex items-center gap-2 font-semibold text-gray-700 mb-2 text-sm;
+
+  i {
+    @apply text-blue-500 text-base;
+  }
+}
+
+.input-field {
+  @apply w-full p-2.5 border border-gray-300 rounded text-sm mb-3;
+
+  &:focus {
+    @apply outline-none border-[#007acc] shadow-[0_0_0_2px_rgba(0,122,204,0.2)];
+  }
+}
+
+.input-hint {
+  @apply mt-2 text-sm text-gray-500 italic;
+}
+
+.form-select {
+  @apply w-full py-3 px-4 pr-5 border border-gray-300 rounded text-[15px] font-semibold text-gray-800 cursor-pointer transition-all duration-200;
+
+  &:focus {
+    @apply outline-none border-[#007acc] shadow-[0_0_0_2px_rgba(0,122,204,0.2)];
+  }
+}
+
 .info-box {
   @apply bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-center gap-2 text-blue-800 font-medium;
 

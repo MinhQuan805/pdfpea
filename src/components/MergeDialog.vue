@@ -341,6 +341,78 @@ export default {
 };
 </script>
 
-<style>
+<style scoped>
 @reference "../css/tailwind.css";
+
+/* File List */
+.files-list {
+  @apply mt-6;
+
+  h4 {
+    @apply m-0 mb-3 text-gray-800 text-lg font-semibold;
+  }
+}
+
+.files-container {
+  @apply border border-gray-200 rounded-lg overflow-hidden;
+}
+
+.file-item {
+  @apply flex items-center p-3 bg-white border-b border-gray-100 cursor-move transition-colors duration-200;
+  &:last-child {
+    @apply border-b-0;
+  }
+
+  &:hover {
+    @apply bg-gray-50;
+  }
+}
+
+.file-drag-handle {
+  @apply text-gray-500 mr-3 text-base;
+}
+
+.file-info {
+  @apply flex-1 flex items-center gap-3;
+
+  i {
+    @apply text-2xl text-red-600;
+  }
+
+  .file-details {
+    @apply flex-1;
+
+    .file-name {
+      @apply block text-sm text-gray-800 font-medium;
+    }
+
+    .file-size {
+      @apply text-xs text-gray-600;
+    }
+  }
+}
+
+.reorder-hint {
+  @apply mt-3 text-xs text-gray-600 flex items-center gap-1.5;
+}
+
+.progress {
+  @apply mt-6;
+
+  p {
+    @apply text-center text-gray-600 text-sm m-0;
+  }
+
+  .progress-bar {
+    @apply w-full h-2 bg-gray-200 rounded overflow-hidden mb-2;
+
+    .progress-fill {
+      @apply h-full bg-linear-to-r from-cyan-500 to-blue-500 transition-all duration-300;
+    }
+  }
+}
+
+.merge-error {
+  @apply mt-4 p-3 bg-yellow-100 border border-yellow-400 rounded-lg text-yellow-800 text-base flex items-center gap-2;
+}
 </style>

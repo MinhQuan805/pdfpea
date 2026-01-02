@@ -1,13 +1,13 @@
 <template>
-  <div v-if="show" class="image-dialog-overlay" @click="handleOverlayClick">
-    <div class="image-dialog" @click.stop>
-      <div class="image-dialog-header">
+  <div v-if="show" class="dialog-overlay" @click="handleOverlayClick">
+    <div class="dialog-container" @click.stop>
+      <div class="dialog-header">
         <h3>Add Image</h3>
         <button @click="closeDialog" class="dialog-close-btn">&times;</button>
       </div>
 
-      <div class="image-dialog-content">
-        <div class="image-dialog-tabs">
+      <div class="dialog-content">
+        <div class="dialog-tabs">
           <button
             :class="{ active: activeTab === 'upload' }"
             @click="activeTab = 'upload'"
@@ -69,7 +69,7 @@
         </div>
       </div>
 
-      <div class="image-dialog-footer">
+      <div class="dialog-footer">
         <button @click="closeDialog" class="btn-secondary">Cancel</button>
         <button @click="confirmSelection" :disabled="!preview" class="btn-primary">
           Add Image
@@ -238,69 +238,5 @@ export default {
     margin: 8px 0;
     color: #666;
   }
-}
-
-/* Image Dialog Styles */
-.image-dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 10000;
-}
-
-.image-dialog {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  width: 90%;
-  max-width: 500px;
-  max-height: 80vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.image-dialog-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
-  background: #f8f9fa;
-
-  h3 {
-    margin: 0;
-    color: #333;
-    font-size: 18px;
-    font-weight: 600;
-  }
-}
-
-.image-dialog-content {
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-}
-
-.image-dialog-tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.image-dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 20px;
-  border-top: 1px solid #e0e0e0;
-  background: #f8f9fa;
 }
 </style>

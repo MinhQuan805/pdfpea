@@ -1,13 +1,13 @@
 <template>
-  <div v-if="show" class="link-dialog-overlay" @click="handleOverlayClick">
-    <div class="link-dialog" @click.stop>
-      <div class="link-dialog-header">
+  <div v-if="show" class="dialog-overlay" @click="handleOverlayClick">
+    <div class="dialog-container" @click.stop>
+      <div class="dialog-header">
         <h3>Add Link</h3>
         <button @click="closeDialog" class="dialog-close-btn">&times;</button>
       </div>
 
-      <div class="link-dialog-content">
-        <div class="link-dialog-tabs">
+      <div class="dialog-content">
+        <div class="dialog-tabs">
           <button
             :class="{ active: activeTab === 'url' }"
             @click="activeTab = 'url'"
@@ -54,7 +54,7 @@
         </div>
       </div>
 
-      <div class="link-dialog-footer">
+      <div class="dialog-footer">
         <button @click="closeDialog" class="btn-secondary">Cancel</button>
         <button @click="confirmSelection" :disabled="!isValid" class="btn-primary">Add Link</button>
       </div>
