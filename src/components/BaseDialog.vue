@@ -5,12 +5,7 @@
         <h3>
           <slot name="title">{{ title }}</slot>
         </h3>
-        <button
-          @click="closeDialog"
-          class="dialog-close-btn"
-        >
-          &times;
-        </button>
+        <button @click="closeDialog" class="dialog-close-btn">&times;</button>
       </div>
 
       <div class="dialog-content">

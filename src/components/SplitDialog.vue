@@ -84,18 +84,14 @@
         class="input-field"
         placeholder="Enter number of pages"
       />
-      <p class="input-hint">
-        This will create {{ Math.ceil(totalPages / everyNPages) }} PDF files
-      </p>
+      <p class="input-hint">This will create {{ Math.ceil(totalPages / everyNPages) }} PDF files</p>
     </div>
 
     <!-- Custom ranges input -->
     <div v-if="splitMode === 'custom'" class="input-section">
       <div class="merge-checkbox-container">
         <input type="checkbox" id="mergeRanges" v-model="mergeRanges" class="merge-checkbox" />
-        <label for="mergeRanges" class="merge-checkbox-label"
-          >Merge all ranges into one file</label
-        >
+        <label for="mergeRanges" class="merge-checkbox-label">Merge all ranges into one file</label>
       </div>
       <div class="mb-4">
         <div v-for="(range, index) in customRanges" :key="index" class="custom-range-item">
@@ -136,9 +132,7 @@
       </div>
 
       <div class="flex justify-center">
-        <button @click="addRange" class="btn-primary">
-          <i class="fa-solid fa-plus"></i> Add
-        </button>
+        <button @click="addRange" class="btn-primary"><i class="fa-solid fa-plus"></i> Add</button>
       </div>
     </div>
 

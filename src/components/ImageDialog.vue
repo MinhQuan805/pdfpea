@@ -9,11 +9,7 @@
         >
           Upload File
         </button>
-        <button
-          :class="{ active: activeTab === 'url' }"
-          @click="activeTab = 'url'"
-          class="tab-btn"
-        >
+        <button :class="{ active: activeTab === 'url' }" @click="activeTab = 'url'" class="tab-btn">
           From URL
         </button>
       </div>
@@ -49,9 +45,7 @@
         class="url-input"
         @keyup.enter="loadFromUrl"
       />
-      <button @click="loadFromUrl" class="load-url-btn" :disabled="!imageUrl">
-        Load Image
-      </button>
+      <button @click="loadFromUrl" class="load-url-btn" :disabled="!imageUrl">Load Image</button>
     </div>
 
     <div v-if="preview" class="image-preview-section">
@@ -65,9 +59,7 @@
 
     <template #footer>
       <button @click="closeDialog" class="btn-secondary">Cancel</button>
-      <button @click="confirmSelection" :disabled="!preview" class="btn-primary">
-        Add Image
-      </button>
+      <button @click="confirmSelection" :disabled="!preview" class="btn-primary">Add Image</button>
     </template>
   </BaseDialog>
 </template>

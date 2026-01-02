@@ -2,11 +2,7 @@
   <BaseDialog :show="show" title="Add Link" @close="closeDialog">
     <template #tabs>
       <div class="flex gap-1 mb-5 border-b border-[#e0e0e0]">
-        <button
-          :class="{ active: activeTab === 'url' }"
-          @click="activeTab = 'url'"
-          class="tab-btn"
-        >
+        <button :class="{ active: activeTab === 'url' }" @click="activeTab = 'url'" class="tab-btn">
           External URL
         </button>
         <button
