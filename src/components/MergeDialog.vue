@@ -1,113 +1,111 @@
 <template>
-  <div
-    v-if="show"
-    class="dialog-overlay"
-    @click="handleOverlayClick"
-    @dragenter.stop
-    @dragover.stop
-    @drop.stop
+  <BaseDialog
+    :show="show"
+    title="Merge PDF Files"
+    :close-on-overlay-click="false"
+    @close="closeDialog"
   >
-    <div class="dialog-container" @click.stop>
-      <div class="dialog-header">
-        <h3>Merge PDF Files</h3>
-        <button @click="closeDialog" class="dialog-close-btn">&times;</button>
-      </div>
-
-      <div class="dialog-content">
-        <!-- Upload Section -->
-        <div class="image-upload-section">
-          <div
-            class="upload-area"
-            @click="triggerFileInput"
-            @dragover.prevent
-            @drop.prevent="handleDrop"
-          >
-            <input
-              type="file"
-              ref="fileInput"
-              accept="application/pdf"
-              multiple
-              @change="handleFileUpload"
-              style="display: none"
-            />
-            <i class="fa-solid fa-cloud-upload-alt upload-icon"></i>
-            <p>Click to upload or drag and drop PDF files</p>
-            <p class="upload-hint">You can select multiple PDF files</p>
-          </div>
-        </div>
-        <!-- Progress -->
-        <div v-if="progress > 0" class="progress">
-          <div class="progress-bar">
-            <div class="progress-fill" :style="{ width: progress + '%' }"></div>
-          </div>
-          <p>Merging PDFs... {{ progress }}%</p>
-        </div>
-        <!-- Error -->
-        <div v-if="error" class="merge-error">
-          <i class="fa-solid fa-exclamation-circle"></i>
-          <p>{{ error }}</p>
-        </div>
-        <!-- Files List -->
-        <div v-if="pdfFiles.length > 0" class="files-list">
-          <h4>Files to Merge ({{ pdfFiles.length }}):</h4>
-          <div class="files-container">
-            <div
-              v-for="(file, index) in pdfFiles"
-              :key="index"
-              class="file-item"
-              draggable="true"
-              @dragstart="handleDragStart(index)"
-              @dragover.prevent
-              @drop.prevent="handleDropReorder(index)"
-            >
-              <div class="file-drag-handle">
-                <i class="fa-solid fa-grip-vertical"></i>
-              </div>
-              <div class="file-info">
-                <i class="fa-solid fa-file-pdf"></i>
-                <div class="file-details">
-                  <span class="file-name">{{ file.name }}</span>
-                  <span class="file-size">{{ formatFileSize(file.size) }}</span>
-                </div>
-              </div>
-              <button @click="removeFile(index)" class="dialog-close-btn">&times;</button>
-            </div>
-          </div>
-          <p class="reorder-hint">
-            <i class="fa-solid fa-info-circle"></i>
-            Drag and drop to reorder files
-          </p>
-        </div>
-      </div>
-
-      <div class="dialog-footer">
-        <button @click="closeDialog" class="btn-secondary" :disabled="merging">Cancel</button>
-        <button v-if="mergedPdfBytes" @click="downloadPDF" class="btn-success">
-          <i class="fa-solid fa-download"></i>
-        </button>
-        <button v-if="mergedPdfBytes" @click="mergeOrganizer" class="btn-primary">
-          <i class="fa-solid fa-file-import mr-0.5"></i>
-          Add to Organizer
-        </button>
-        <button
-          v-else
-          @click="mergePDFs"
-          :disabled="pdfFiles.length < 2 || merging"
-          class="btn-primary"
-        >
-          <i class="fa-solid fa-object-group"></i>
-          Merge {{ pdfFiles.length }} Files
-        </button>
+    <!-- Upload Section -->
+    <div class="image-upload-section">
+      <div
+        class="upload-area"
+        @click="triggerFileInput"
+        @dragover.prevent
+        @drop.prevent="handleDrop"
+      >
+        <input
+          type="file"
+          ref="fileInput"
+          accept="application/pdf"
+          multiple
+          @change="handleFileUpload"
+          style="display: none"
+        />
+        <i class="fa-solid fa-cloud-upload-alt upload-icon"></i>
+        <p>Click to upload or drag and drop PDF files</p>
+        <p class="upload-hint">You can select multiple PDF files</p>
       </div>
     </div>
-  </div>
+    <!-- Progress -->
+    <div v-if="progress > 0" class="progress">
+      <div class="progress-bar">
+        <div class="progress-fill" :style="{ width: progress + '%' }"></div>
+      </div>
+      <p>Merging PDFs... {{ progress }}%</p>
+    </div>
+    <!-- Error -->
+    <div v-if="error" class="merge-error">
+      <i class="fa-solid fa-exclamation-circle"></i>
+      <p>{{ error }}</p>
+    </div>
+    <!-- Files List -->
+    <div v-if="pdfFiles.length > 0" class="files-list">
+      <h4>Files to Merge ({{ pdfFiles.length }}):</h4>
+      <div class="files-container">
+        <div
+          v-for="(file, index) in pdfFiles"
+          :key="index"
+          class="file-item"
+          draggable="true"
+          @dragstart="handleDragStart(index)"
+          @dragover.prevent
+          @drop.prevent="handleDropReorder(index)"
+        >
+          <div class="file-drag-handle">
+            <i class="fa-solid fa-grip-vertical"></i>
+          </div>
+          <div class="file-info">
+            <i class="fa-solid fa-file-pdf"></i>
+            <div class="file-details">
+              <span class="file-name">{{ file.name }}</span>
+              <span class="file-size">{{ formatFileSize(file.size) }}</span>
+            </div>
+          </div>
+          <button
+            @click="removeFile(index)"
+            class="bg-transparent border-none text-2xl text-gray-600 cursor-pointer p-0 w-[30px] h-[30px] flex items-center justify-center rounded transition-colors duration-200 hover:bg-gray-200"
+          >
+            &times;
+          </button>
+        </div>
+      </div>
+      <p class="reorder-hint">
+        <i class="fa-solid fa-info-circle"></i>
+        Drag and drop to reorder files
+      </p>
+    </div>
+
+    <template #footer>
+      <button @click="closeDialog" class="btn-secondary" :disabled="merging">Cancel</button>
+      <button v-if="mergedPdfBytes" @click="downloadPDF" class="btn-success">
+        <i class="fa-solid fa-download"></i>
+      </button>
+      <button v-if="mergedPdfBytes" @click="mergeOrganizer" class="btn-primary">
+        <i class="fa-solid fa-file-import mr-0.5"></i>
+        Add to Organizer
+      </button>
+      <button
+        v-else
+        @click="mergePDFs"
+        :disabled="pdfFiles.length < 2 || merging"
+        class="btn-primary"
+      >
+        <i class="fa-solid fa-object-group"></i>
+        Merge {{ pdfFiles.length }} Files
+      </button>
+    </template>
+  </BaseDialog>
 </template>
 
 <script lang="ts">
 import { ref, watch } from "vue";
+import BaseDialog from "./BaseDialog.vue";
 
 export default {
   name: "MergeDialog",
+  components: {
+    BaseDialog,
+  },
   props: {
     show: {
       type: Boolean,
@@ -161,12 +159,6 @@ export default {
       draggedIndex.value = null;
       mergedPdfBytes.value = null;
       mergedFileName.value = "";
-    };
-
-    const handleOverlayClick = () => {
-      if (!merging.value) {
-        closeDialog();
-      }
     };
 
     const closeDialog = () => {
@@ -323,7 +315,6 @@ export default {
       merging,
       progress,
       mergedPdfBytes,
-      handleOverlayClick,
       closeDialog,
       triggerFileInput,
       handleFileUpload,

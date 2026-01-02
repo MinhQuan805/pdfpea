@@ -1,89 +1,86 @@
 <template>
-  <div v-if="show" class="dialog-overlay" @click="handleOverlayClick">
-    <div class="dialog-container" @click.stop>
-      <div class="dialog-header">
-        <h3>Add Image</h3>
-        <button @click="closeDialog" class="dialog-close-btn">&times;</button>
-      </div>
-
-      <div class="dialog-content">
-        <div class="dialog-tabs">
-          <button
-            :class="{ active: activeTab === 'upload' }"
-            @click="activeTab = 'upload'"
-            class="tab-btn"
-          >
-            Upload File
-          </button>
-          <button
-            :class="{ active: activeTab === 'url' }"
-            @click="activeTab = 'url'"
-            class="tab-btn"
-          >
-            From URL
-          </button>
-        </div>
-
-        <div v-if="activeTab === 'upload'" class="image-upload-section">
-          <div
-            class="upload-area"
-            @click="triggerFileInput"
-            @dragover.prevent
-            @drop.prevent="handleDrop"
-          >
-            <input
-              type="file"
-              ref="fileInput"
-              accept="image/*"
-              @change="handleFileUpload"
-              style="display: none"
-            />
-            <i class="fa-solid fa-cloud-upload-alt upload-icon"></i>
-            <p>Click to upload or drag and drop an image</p>
-            <p class="upload-hint">Supports: JPG, PNG, GIF, WebP</p>
-          </div>
-        </div>
-
-        <div v-if="activeTab === 'url'" class="image-url-section">
-          <label for="imageUrl">Image URL:</label>
-          <input
-            id="imageUrl"
-            type="url"
-            v-model="imageUrl"
-            placeholder="https://example.com/image.jpg"
-            class="url-input"
-            @keyup.enter="loadFromUrl"
-          />
-          <button @click="loadFromUrl" class="load-url-btn" :disabled="!imageUrl">
-            Load Image
-          </button>
-        </div>
-
-        <div v-if="preview" class="image-preview-section">
-          <h4>Preview:</h4>
-          <img :src="preview" alt="Preview" class="image-preview" />
-        </div>
-
-        <div v-if="error" class="image-error">
-          <p>{{ error }}</p>
-        </div>
-      </div>
-
-      <div class="dialog-footer">
-        <button @click="closeDialog" class="btn-secondary">Cancel</button>
-        <button @click="confirmSelection" :disabled="!preview" class="btn-primary">
-          Add Image
+  <BaseDialog :show="show" title="Add Image" @close="closeDialog">
+    <template #tabs>
+      <div class="flex gap-1 mb-5 border-b border-[#e0e0e0]">
+        <button
+          :class="{ active: activeTab === 'upload' }"
+          @click="activeTab = 'upload'"
+          class="tab-btn"
+        >
+          Upload File
+        </button>
+        <button
+          :class="{ active: activeTab === 'url' }"
+          @click="activeTab = 'url'"
+          class="tab-btn"
+        >
+          From URL
         </button>
       </div>
+    </template>
+
+    <div v-if="activeTab === 'upload'" class="image-upload-section">
+      <div
+        class="upload-area"
+        @click="triggerFileInput"
+        @dragover.prevent
+        @drop.prevent="handleDrop"
+      >
+        <input
+          type="file"
+          ref="fileInput"
+          accept="image/*"
+          @change="handleFileUpload"
+          style="display: none"
+        />
+        <i class="fa-solid fa-cloud-upload-alt upload-icon"></i>
+        <p>Click to upload or drag and drop an image</p>
+        <p class="upload-hint">Supports: JPG, PNG, GIF, WebP</p>
+      </div>
     </div>
-  </div>
+
+    <div v-if="activeTab === 'url'" class="image-url-section">
+      <label for="imageUrl">Image URL:</label>
+      <input
+        id="imageUrl"
+        type="url"
+        v-model="imageUrl"
+        placeholder="https://example.com/image.jpg"
+        class="url-input"
+        @keyup.enter="loadFromUrl"
+      />
+      <button @click="loadFromUrl" class="load-url-btn" :disabled="!imageUrl">
+        Load Image
+      </button>
+    </div>
+
+    <div v-if="preview" class="image-preview-section">
+      <h4>Preview:</h4>
+      <img :src="preview" alt="Preview" class="image-preview" />
+    </div>
+
+    <div v-if="error" class="image-error">
+      <p>{{ error }}</p>
+    </div>
+
+    <template #footer>
+      <button @click="closeDialog" class="btn-secondary">Cancel</button>
+      <button @click="confirmSelection" :disabled="!preview" class="btn-primary">
+        Add Image
+      </button>
+    </template>
+  </BaseDialog>
 </template>
 
 <script lang="ts">
 import { ref, watch } from "vue";
+import BaseDialog from "./BaseDialog.vue";
 
 export default {
   name: "ImageDialog",
+  components: {
+    BaseDialog,
+  },
   props: {
     show: {
       type: Boolean,
@@ -113,10 +110,6 @@ export default {
       imageUrl.value = "";
       preview.value = "";
       error.value = "";
-    };
-
-    const handleOverlayClick = () => {
-      closeDialog();
     };
 
     const closeDialog = () => {
@@ -207,7 +200,6 @@ export default {
       preview,
       error,
       fileInput,
-      handleOverlayClick,
       closeDialog,
       triggerFileInput,
       handleFileUpload,

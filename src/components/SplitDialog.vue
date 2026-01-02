@@ -1,60 +1,121 @@
 <template>
-  <div v-if="show" class="dialog-overlay" @click.self="closeDialog">
-    <div class="dialog-container">
-      <div class="dialog-header">
-        <h2 class="dialog-title">
-          <i class="fa-solid fa-scissors"></i>
-          Split PDF
-        </h2>
-        <button @click="closeDialog" class="dialog-close-btn">&times;</button>
+  <BaseDialog :show="show" @close="closeDialog">
+    <template #title>
+      <div class="dialog-title">
+        <i class="fa-solid fa-scissors"></i>
+        Split PDF
       </div>
+    </template>
 
-      <div class="dialog-body">
-        <div class="info-box">
-          <i class="fa-solid fa-info-circle"></i>
-          <span>Total pages: {{ totalPages }}</span>
-        </div>
+    <div class="info-box">
+      <i class="fa-solid fa-info-circle"></i>
+      <span>Total pages: {{ totalPages }}</span>
+    </div>
 
-        <div class="split-mode-section">
-          <label class="input-label">
-            <i class="fa-solid fa-scissors"></i>
-            Split mode:
-          </label>
-          <select v-model="splitMode" class="form-select">
-            <option value="range">Extract page range</option>
-            <option value="at-page">Split at page</option>
-            <option value="every">Split every N pages</option>
-            <option value="custom">Custom ranges</option>
-          </select>
-          <p class="mode-description">{{ modeDescription }}</p>
-        </div>
+    <div class="split-mode-section">
+      <label class="input-label">
+        <i class="fa-solid fa-scissors"></i>
+        Split mode:
+      </label>
+      <select v-model="splitMode" class="form-select">
+        <option value="range">Extract page range</option>
+        <option value="at-page">Split at page</option>
+        <option value="every">Split every N pages</option>
+        <option value="custom">Custom ranges</option>
+      </select>
+      <p class="mode-description">{{ modeDescription }}</p>
+    </div>
 
-        <!-- Split at page input -->
-        <div v-if="splitMode === 'at-page'" class="input-section">
-          <label class="input-label">Split after page:</label>
+    <!-- Split at page input -->
+    <div v-if="splitMode === 'at-page'" class="input-section">
+      <label class="input-label">Split after page:</label>
+      <input
+        type="number"
+        v-model.number="splitAtPage"
+        :min="1"
+        :max="totalPages - 1"
+        class="input-field"
+        placeholder="Enter page number"
+      />
+      <p class="input-hint">
+        This will create two PDFs: pages 1-{{ splitAtPage }} and pages {{ splitAtPage + 1 }}-{{
+          totalPages
+        }}
+      </p>
+    </div>
+
+    <!-- Range input -->
+    <div v-if="splitMode === 'range'" class="input-section">
+      <div class="range-inputs">
+        <div class="input-group">
+          <label class="input-label">From page:</label>
           <input
             type="number"
-            v-model.number="splitAtPage"
+            v-model.number="rangeFrom"
             :min="1"
-            :max="totalPages - 1"
+            :max="totalPages"
             class="input-field"
-            placeholder="Enter page number"
           />
-          <p class="input-hint">
-            This will create two PDFs: pages 1-{{ splitAtPage }} and pages {{ splitAtPage + 1 }}-{{
-              totalPages
-            }}
-          </p>
         </div>
+        <div class="input-group">
+          <label class="input-label">To page:</label>
+          <input
+            type="number"
+            v-model.number="rangeTo"
+            :min="rangeFrom"
+            :max="totalPages"
+            class="input-field"
+          />
+        </div>
+      </div>
+      <p class="input-hint">
+        Extract pages {{ rangeFrom }} to {{ rangeTo }} ({{ rangeTo - rangeFrom + 1 }} pages)
+      </p>
+    </div>
 
-        <!-- Range input -->
-        <div v-if="splitMode === 'range'" class="input-section">
+    <!-- Every N pages input -->
+    <div v-if="splitMode === 'every'" class="input-section">
+      <label class="input-label">Pages per split:</label>
+      <input
+        type="number"
+        v-model.number="everyNPages"
+        :min="1"
+        :max="totalPages"
+        class="input-field"
+        placeholder="Enter number of pages"
+      />
+      <p class="input-hint">
+        This will create {{ Math.ceil(totalPages / everyNPages) }} PDF files
+      </p>
+    </div>
+
+    <!-- Custom ranges input -->
+    <div v-if="splitMode === 'custom'" class="input-section">
+      <div class="merge-checkbox-container">
+        <input type="checkbox" id="mergeRanges" v-model="mergeRanges" class="merge-checkbox" />
+        <label for="mergeRanges" class="merge-checkbox-label"
+          >Merge all ranges into one file</label
+        >
+      </div>
+      <div class="mb-4">
+        <div v-for="(range, index) in customRanges" :key="index" class="custom-range-item">
+          <div class="custom-range-header">
+            <label class="input-label">Range {{ index + 1 }}:</label>
+            <button
+              @click="removeRange(index)"
+              class="remove-range-btn"
+              :disabled="customRanges.length === 1"
+              title="Remove range"
+            >
+              <i class="fa-solid fa-trash-alt"></i>
+            </button>
+          </div>
           <div class="range-inputs">
             <div class="input-group">
               <label class="input-label">From page:</label>
               <input
                 type="number"
-                v-model.number="rangeFrom"
+                v-model.number="range.from"
                 :min="1"
                 :max="totalPages"
                 class="input-field"
@@ -64,102 +125,41 @@
               <label class="input-label">To page:</label>
               <input
                 type="number"
-                v-model.number="rangeTo"
-                :min="rangeFrom"
+                v-model.number="range.to"
+                :min="range.from"
                 :max="totalPages"
                 class="input-field"
               />
             </div>
           </div>
-          <p class="input-hint">
-            Extract pages {{ rangeFrom }} to {{ rangeTo }} ({{ rangeTo - rangeFrom + 1 }} pages)
-          </p>
-        </div>
-
-        <!-- Every N pages input -->
-        <div v-if="splitMode === 'every'" class="input-section">
-          <label class="input-label">Pages per split:</label>
-          <input
-            type="number"
-            v-model.number="everyNPages"
-            :min="1"
-            :max="totalPages"
-            class="input-field"
-            placeholder="Enter number of pages"
-          />
-          <p class="input-hint">
-            This will create {{ Math.ceil(totalPages / everyNPages) }} PDF files
-          </p>
-        </div>
-
-        <!-- Custom ranges input -->
-        <div v-if="splitMode === 'custom'" class="input-section">
-          <div class="merge-checkbox-container">
-            <input type="checkbox" id="mergeRanges" v-model="mergeRanges" class="merge-checkbox" />
-            <label for="mergeRanges" class="merge-checkbox-label"
-              >Merge all ranges into one file</label
-            >
-          </div>
-          <div class="mb-4">
-            <div v-for="(range, index) in customRanges" :key="index" class="custom-range-item">
-              <div class="custom-range-header">
-                <label class="input-label">Range {{ index + 1 }}:</label>
-                <button
-                  @click="removeRange(index)"
-                  class="remove-range-btn"
-                  :disabled="customRanges.length === 1"
-                  title="Remove range"
-                >
-                  <i class="fa-solid fa-trash-alt"></i>
-                </button>
-              </div>
-              <div class="range-inputs">
-                <div class="input-group">
-                  <label class="input-label">From page:</label>
-                  <input
-                    type="number"
-                    v-model.number="range.from"
-                    :min="1"
-                    :max="totalPages"
-                    class="input-field"
-                  />
-                </div>
-                <div class="input-group">
-                  <label class="input-label">To page:</label>
-                  <input
-                    type="number"
-                    v-model.number="range.to"
-                    :min="range.from"
-                    :max="totalPages"
-                    class="input-field"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex justify-center">
-            <button @click="addRange" class="btn-primary">
-              <i class="fa-solid fa-plus"></i> Add
-            </button>
-          </div>
         </div>
       </div>
 
-      <div class="dialog-footer">
-        <button @click="closeDialog" class="btn-secondary">Cancel</button>
-        <button @click="handleSplit" class="btn-primary" :disabled="!isValid">
-          <i class="fa-solid fa-scissors"></i>
-          Split PDF
+      <div class="flex justify-center">
+        <button @click="addRange" class="btn-primary">
+          <i class="fa-solid fa-plus"></i> Add
         </button>
       </div>
     </div>
-  </div>
+
+    <template #footer>
+      <button @click="closeDialog" class="btn-secondary">Cancel</button>
+      <button @click="handleSplit" class="btn-primary" :disabled="!isValid">
+        <i class="fa-solid fa-scissors"></i>
+        Split PDF
+      </button>
+    </template>
+  </BaseDialog>
 </template>
 
 <script lang="ts">
+import BaseDialog from "./BaseDialog.vue";
+
 export default {
   name: "SplitDialog",
+  components: {
+    BaseDialog,
+  },
   props: {
     show: {
       type: Boolean,
@@ -182,6 +182,15 @@ export default {
     };
   },
   computed: {
+    modeDescription() {
+      const descriptions = {
+        range: "Extract a specific range of pages",
+        "at-page": "Split the PDF into two parts at a specific page",
+        every: "Split the PDF into multiple files with equal page counts",
+        custom: "Extract multiple specific page ranges",
+      };
+      return descriptions[this.splitMode] || "";
+    },
     isValid() {
       if (this.splitMode === "at-page") {
         return this.splitAtPage >= 1 && this.splitAtPage < this.totalPages;
