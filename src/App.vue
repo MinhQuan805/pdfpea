@@ -3191,7 +3191,6 @@ export default {
 
     // Text Selection Toolbar functions
     const handleDocumentMouseUp = (e) => {
-
       if (selectedTool.value === "text") {
         return;
       }

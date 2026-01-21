@@ -501,5 +501,4 @@ export default {
     @apply w-3 h-3 rounded-full bg-blue-500;
   }
 }
-
 </style>
