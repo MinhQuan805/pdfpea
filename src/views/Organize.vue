@@ -390,11 +390,10 @@
 </template>
 
 <script lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted } from "vue";
+import { ref, computed, nextTick, onMounted, onUnmounted, shallowRef, triggerRef } from "vue";
 import { PDFOrganizer } from "../js/PDFOrganizer.js";
 import SplitDialog from "../components/SplitDialog.vue";
 import MergeDialog from "../components/MergeDialog.vue";
-import { clear } from "console";
 
 export default {
   name: "OrganizerApp",
@@ -402,15 +401,16 @@ export default {
     const fileInput = ref(null);
     const fileAppend = ref(null);
     const organizer = new PDFOrganizer();
-    const pages = ref([]);
+    const isComponentMounted = ref(true);
+    const pages = shallowRef([]);
     const isLoaded = ref(false);
     // Store the original file name for export
     const originalFileName = ref("");
-    // drag and drop state
+    // Drag and drop state
     const draggedIndex = ref(null);
     const draggedIndices = ref([]);
     const pagesPerRow = ref(5);
-    const pageCanvasRefs = ref({});
+    const pageCanvasRefs = {};
     // Tool and selection state
     const selectedTool = ref("select");
     const selectedCount = ref(0);
@@ -422,6 +422,7 @@ export default {
     const showExportMenu = ref(false);
     // Preview modal state
     const previewModal = ref({ show: false, pageIndex: -1, scale: 2.0 });
+    const previewImageSrc = ref("");
     const previewCanvasRef = ref(null);
     const showZoomLens = ref(false);
     const zoomLensStyle = ref({});
@@ -531,8 +532,17 @@ export default {
       if (file.type !== "application/pdf") {
         return;
       }
+
+      // Clean up old refs if resetting
+      if (reset) {
+        for (const key in pageCanvasRefs) {
+          delete pageCanvasRefs[key];
+        }
+      }
+
       try {
         const result = await organizer.loadPDFFile(file, reset);
+        if (!isComponentMounted.value) return;
         // Update pages with reactivity trigger
         pages.value = [...result.pages];
         isLoaded.value = true;
@@ -542,6 +552,7 @@ export default {
 
         // Render only the newly added pages
         for (let i = result.startId; i < result.endId; i++) {
+          if (!isComponentMounted.value) break;
           const pageIndex = pages.value.findIndex((p) => p.id === i);
           if (pageIndex !== -1) {
             await renderPage(pageIndex);
@@ -560,6 +571,7 @@ export default {
         pages.value.forEach((page) => {
           page.selected = false;
         });
+        triggerRef(pages); // Trigger update for shallowRef
         updateSelectionCount();
       }
       if (tool !== "swap") {
@@ -603,6 +615,7 @@ export default {
         page.selected = !page.selected;
         lastSelectedIndex = index;
       }
+      triggerRef(pages); // Trigger update for shallowRef
       updateSelectionCount();
     };
 
@@ -614,6 +627,7 @@ export default {
       } else if (swapSourceIndex.value === index) {
         // Clicked the same page, reset
         if (pages.value[index]) pages.value[index].selected = false;
+        triggerRef(pages);
         swapSourceIndex.value = null;
         updateSelectionCount();
       } else {
@@ -655,7 +669,7 @@ export default {
 
       await nextTick();
 
-      const canvas = pageCanvasRefs.value[blankPage.id];
+      const canvas = pageCanvasRefs[blankPage.id];
       if (canvas) {
         organizer.renderBlankPage(canvas);
       }
@@ -666,7 +680,7 @@ export default {
 
       // Clean up canvas reference
       if (page && page.id !== undefined) {
-        delete pageCanvasRefs.value[page.id];
+        delete pageCanvasRefs[page.id];
       }
 
       organizer.deletePage(index);
@@ -694,6 +708,7 @@ export default {
       pages.value.forEach((page) => {
         page.selected = shouldSelect;
       });
+      triggerRef(pages); // Trigger update for shallowRef
       updateSelectionCount();
     };
 
@@ -753,20 +768,23 @@ export default {
     };
 
     const renderPage = async (index) => {
+      if (!isComponentMounted.value) return;
       const page = pages.value[index];
       if (!page) return;
-      let canvas = pageCanvasRefs.value[page.id];
+      let canvas = pageCanvasRefs[page.id];
       let attempts = 0;
       const maxAttempts = 20;
       while (!canvas && attempts < maxAttempts) {
+        if (!isComponentMounted.value) return; // Stop immediately if unmounted
         await new Promise((resolve) => setTimeout(resolve, 50));
-        canvas = pageCanvasRefs.value[page.id];
+        canvas = pageCanvasRefs[page.id];
         attempts++;
       }
       if (!canvas) {
         return;
       }
       try {
+        if (!isComponentMounted.value) return;
         if (page.isBlank) {
           organizer.renderBlankPage(canvas);
         } else {
@@ -779,7 +797,9 @@ export default {
 
     const setPageCanvas = (pageId, el) => {
       if (el) {
-        pageCanvasRefs.value[pageId] = el;
+        pageCanvasRefs[pageId] = el;
+      } else {
+        delete pageCanvasRefs[pageId];
       }
     };
 
@@ -799,6 +819,9 @@ export default {
       if (index >= 0 && canvas) {
         try {
           await organizer.renderPage(index, canvas, previewModal.value.scale);
+          if (isComponentMounted.value) {
+            previewImageSrc.value = canvas.toDataURL();
+          }
         } catch (e) {
           console.error("Preview render error", e);
         }
@@ -810,6 +833,8 @@ export default {
       previewModal.value.pageIndex = -1;
       zoomEnabled.value = false;
       showZoomLens.value = false;
+      previewImageSrc.value = "";
+      zoomResultStyle.value = {};
     };
 
     const navigatePreview = async (direction) => {
@@ -881,7 +906,7 @@ export default {
       zoomResultStyle.value = {
         left: `${zoomResultX}px`,
         top: `${zoomResultY}px`,
-        backgroundImage: `url(${canvas.toDataURL()})`,
+        backgroundImage: `url(${previewImageSrc.value})`,
         backgroundSize: `${rect.width * zoomLevel}px ${rect.height * zoomLevel}px`,
         backgroundPosition: `${bgPosX}px ${bgPosY}px`,
         backgroundRepeat: "no-repeat",
@@ -913,21 +938,23 @@ export default {
       const scrollSpeed = 10;
       const container = pdfViewContainer.value;
 
-      if (mouseY - rect.top < scrollThreshold) {
-        const scroll = () => {
+      const scroll = () => {
+        if (draggedIndex.value === null) {
+          clearAutoScroll();
+          return;
+        }
+
+        if (mouseY - rect.top < scrollThreshold) {
           container.scrollTop -= scrollSpeed;
           if (container.scrollTop > 0) autoScrollInterval.value = requestAnimationFrame(scroll);
-        };
-        autoScrollInterval.value = requestAnimationFrame(scroll);
-      } else if (rect.bottom - mouseY < scrollThreshold) {
-        const scroll = () => {
+        } else if (rect.bottom - mouseY < scrollThreshold) {
           container.scrollTop += scrollSpeed;
           if (container.scrollTop < container.scrollHeight - container.clientHeight) {
             autoScrollInterval.value = requestAnimationFrame(scroll);
           }
-        };
-        autoScrollInterval.value = requestAnimationFrame(scroll);
-      }
+        }
+      };
+      autoScrollInterval.value = requestAnimationFrame(scroll);
     };
 
     const handleDragStart = (index) => {
@@ -955,7 +982,10 @@ export default {
 
       clearAutoScroll();
       const rect = container.getBoundingClientRect();
-      setupAutoScroll(event.clientY, rect);
+
+      if (event.clientY >= rect.top && event.clientY <= rect.bottom) {
+        setupAutoScroll(event.clientY, rect);
+      }
     };
 
     const handleDragEnd = () => clearAutoScroll();
@@ -981,6 +1011,7 @@ export default {
       pages.value.forEach((page) => {
         if (page?.selected) page.selected = false;
       });
+      triggerRef(pages); // Trigger update for shallowRef
       updateSelectionCount();
 
       // Clean up auto scroll
@@ -1019,13 +1050,14 @@ export default {
 
     const closeMergeDialog = () => {
       showMergeDialog.value = false;
+      initialFile.value = [];
     };
 
     const handleMerge = async (blob) => {
       try {
         const file = new File([blob], "merged.pdf", { type: "application/pdf" });
         await loadPDFFile(file, true);
-        showMergeDialog.value = false;
+        closeMergeDialog();
         showToast("Merged PDF loaded successfully!", "success");
       } catch (err) {
         console.error("Error loading merged PDF:", err);
@@ -1060,6 +1092,9 @@ export default {
           downloadPDFBytes(result[0], `${baseName}_part_1.pdf`);
           downloadPDFBytes(result[1], `${baseName}_part_2.pdf`);
         } else if (splitData.mode === "range") {
+          result = await organizer.extractPageRange(splitData.rangeFrom, splitData.rangeTo);
+          downloadPDFBytes(result, `splited_pdf.pdf`);
+        } else if (splitData.mode === "every") {
           result = await organizer.extractPageRange(splitData.rangeFrom, splitData.rangeTo);
           downloadPDFBytes(result, `${baseName}_split.pdf`);
         } else if (splitData.mode === "every") {
@@ -1102,7 +1137,9 @@ export default {
       await nextTick();
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 100);
     };
     // Download PDF
     const downloadFile = async () => {
@@ -1161,17 +1198,26 @@ export default {
         const reader = new FileReader();
 
         reader.onload = (e) => {
-          sessionStorage.setItem("pdfFileFromOrganizer", e.target.result);
+          try {
+            sessionStorage.removeItem("pdfFileFromOrganizer");
+            sessionStorage.setItem("pdfFileFromOrganizer", e.target.result);
 
-          // Dispatch event to notify PDF Editor
-          const event = new CustomEvent("loadPdfFromOrganizer", {
-            detail: { pdfData: e.target.result },
-          });
-          window.dispatchEvent(event);
+            // Dispatch event to notify PDF Editor
+            const event = new CustomEvent("loadPdfFromOrganizer", {
+              detail: { pdfData: e.target.result },
+            });
+            window.dispatchEvent(event);
 
-          // Auto switch to edit tab
-          if (typeof window.switchEditorTab === "function") {
-            window.switchEditorTab("edit");
+            // Auto switch to edit tab
+            if (typeof window.switchEditorTab === "function") {
+              window.switchEditorTab("edit");
+            }
+          } catch (error) {
+            if (error.name === "QuotaExceededError") {
+              showToast("File too large to send to editor directly", "error");
+            } else {
+              throw error;
+            }
           }
         };
 
@@ -1188,11 +1234,34 @@ export default {
 
     onMounted(() => {
       document.addEventListener("click", handleGlobalClick);
+      // Clean start
+      sessionStorage.removeItem("pdfFileFromOrganizer");
     });
 
     onUnmounted(() => {
       document.removeEventListener("click", handleGlobalClick);
       clearAutoScroll();
+      isComponentMounted.value = false;
+
+      if (toast.value.timeout) {
+        clearTimeout(toast.value.timeout);
+      }
+      toast.value.timeout = null;
+
+      for (const key in pageCanvasRefs) {
+        delete pageCanvasRefs[key];
+      }
+      previewCanvasRef.value = null;
+
+      if (organizer && typeof organizer.destroy === "function") {
+        organizer.destroy();
+      }
+
+      pages.value = [];
+      initialFile.value = [];
+
+      // Cleanup session storage
+      sessionStorage.removeItem("pdfFileFromOrganizer");
     });
 
     return {

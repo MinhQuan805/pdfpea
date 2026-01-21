@@ -967,8 +967,6 @@ export default {
     PaginationBar,
   },
   setup() {
-    console.log("Vue setup() function called - this means Vue is working");
-
     const pdfViewContainer = ref(null);
     const file = ref(null);
     const configFile = ref(null);
@@ -985,6 +983,9 @@ export default {
     const lastMousePosition = ref({ x: 0, y: 0 });
     // Icon cache for base64 encoded SVGs
     const iconCache = ref({});
+
+    // Store event listeners for cleanup
+    const elementEventListeners = new Map();
 
     // Define icon tools array for dynamic rendering
     const iconTools = ref([
@@ -1157,6 +1158,8 @@ export default {
     const selectStartPos = ref({ x: 0, y: 0 });
     const selectCurrentPos = ref({ x: 0, y: 0 });
     const selectRectElement = ref(null);
+    const tooltipCleanupFns = [];
+    const resizeTimeout = ref(null);
 
     // Image dialog functions - simplified
     const openImageDialog = (page, id, x, y, width, height) => {
@@ -1180,10 +1183,6 @@ export default {
         height,
       );
 
-      //if (component) {
-      //  component.setSelected(true);
-      //}
-
       pendingImageData.value = null;
     };
 
@@ -1199,7 +1198,6 @@ export default {
     };
 
     const handleLinkConfirm = ({ type, value }) => {
-      console.log(`handleLinkConfirm`);
       if (!pendingLinkData.value) return;
 
       const { page, id, x, y, width, height } = pendingLinkData.value;
@@ -1441,30 +1439,39 @@ export default {
       temp.textContent = text || "WATERMARK";
 
       document.body.appendChild(temp);
-      const width = Math.max(temp.offsetWidth + 8, 20);
-      const height = Math.max(temp.offsetHeight + 8, 20);
-      document.body.removeChild(temp);
+      try {
+        const width = Math.max(temp.offsetWidth + 8, 20);
+        const height = Math.max(temp.offsetHeight + 8, 20);
 
-      // Calculate position based on dimensions
-      const positions = {
-        "top-left": { x: 0, y: 0 },
-        "top-center": { x: (pageWidth - width) / 2, y: 0 },
-        "top-right": { x: pageWidth - width - 0, y: 0 },
-        "middle-left": { x: 0, y: (pageHeight - height) / 2 },
-        center: { x: (pageWidth - width) / 2, y: (pageHeight - height) / 2 },
-        "middle-right": { x: pageWidth - width - 0, y: (pageHeight - height) / 2 },
-        "bottom-left": { x: 0, y: pageHeight - height - 0 },
-        "bottom-center": { x: (pageWidth - width) / 2, y: pageHeight - height },
-        "bottom-right": { x: pageWidth - width - 0, y: pageHeight - height },
-      };
-      const pos = positions[position] || positions["center"];
+        // Calculate position based on dimensions
+        const positions = {
+          "top-left": { x: 0, y: 0 },
+          "top-center": { x: (pageWidth - width) / 2, y: 0 },
+          "top-right": { x: pageWidth - width - 0, y: 0 },
+          "middle-left": { x: 0, y: (pageHeight - height) / 2 },
+          center: { x: (pageWidth - width) / 2, y: (pageHeight - height) / 2 },
+          "middle-right": { x: pageWidth - width - 0, y: (pageHeight - height) / 2 },
+          "bottom-left": { x: 0, y: pageHeight - height - 0 },
+          "bottom-center": { x: (pageWidth - width) / 2, y: pageHeight - height },
+          "bottom-right": { x: pageWidth - width - 0, y: pageHeight - height },
+        };
+        const pos = positions[position] || positions["center"];
 
-      return { width, height, x: pos.x, y: pos.y };
+        return { width, height, x: pos.x, y: pos.y };
+      } finally {
+        if (temp.parentNode) {
+          temp.parentNode.removeChild(temp);
+        }
+      }
     };
 
     const closeWatermarkDialog = () => {
       showWatermarkDialog.value = false;
       editingWatermarkGroupId.value = null;
+      watermarkPreviewImage.value = null;
+      watermarkEditData.value = null;
+      watermarkPageWidth.value = 0;
+      watermarkPageHeight.value = 0;
     };
 
     const handleWatermarkDelete = () => {
@@ -1558,8 +1565,6 @@ export default {
 
     // Toast functions
     const showToast = (message, type = "success", duration = 2000) => {
-      console.log("showToast called:", { message, type, duration });
-
       // Clear existing timeout
       if (toast.value.timeout) {
         clearTimeout(toast.value.timeout);
@@ -1568,8 +1573,6 @@ export default {
       toast.value.message = message;
       toast.value.type = type;
       toast.value.show = true;
-
-      console.log("Toast state after setting:", toast.value);
 
       // Auto-hide after duration
       toast.value.timeout = setTimeout(() => {
@@ -1591,11 +1594,41 @@ export default {
         const pdfPages = pdfViewContainer.value.querySelectorAll(".pdf-page");
         pdfPages.forEach((page) => page.remove());
       }
+
+      clearPropertyPanel();
+      cleanupAllElementListeners(elementEventListeners);
+
+      // Clear measurements to release DOM references
+      clearMeasurements();
+
+      // Reset drawing state
+      isDrawing.value = false;
+      freehandPath.value = [];
+      if (drawingOverlay) {
+        drawingOverlay.remove();
+        drawingOverlay = null;
+      }
+
+      // Reset text selection state
+      isSelectingText.value = false;
+      if (selectRectElement.value) {
+        selectRectElement.value.style.display = "none";
+      }
+
+      // Close all dialogs to prevent holding references to old data
+      closeImageDialog();
+      closeLinkDialog();
+      closeNoteDialog();
+      closeWatermarkDialog();
+      closeSearchBox();
+
+      // Clear search matches to release DOM references
+      searchMatches.value = [];
+      currentMatchIndex.value = 0;
       isLoaded.value = false;
     };
 
     const clickFileInput = () => {
-      console.log("clickFileInput called");
       file.value.click();
     };
 
@@ -1623,8 +1656,6 @@ export default {
         cancelable: true,
       });
       document.dispatchEvent(clearEvent);
-
-      console.log("Selected tool:", tool);
     };
 
     const getToolSettings = (tool) => {
@@ -1757,9 +1788,7 @@ export default {
 
         // Add drawing listeners to both canvas and container
         const addDrawingListeners = (element) => {
-          element.addEventListener("mousedown", (event) => {
-            console.log(`mouse down`);
-
+          const mousedownHandler = (event) => {
             // Check if click is on a moveable control or delete button
             if (
               event.target.closest(".moveable-control") ||
@@ -1820,9 +1849,6 @@ export default {
                 iconSize,
                 iconSize,
               );
-              //if (component) {
-              //  component.setSelected(true);
-              //}
               isDrawing.value = false;
               return;
             }
@@ -1983,9 +2009,9 @@ export default {
               container,
               zoomFactor,
             );
-          });
+          };
 
-          element.addEventListener("mousemove", (event) => {
+          const mousemoveHandler = (event) => {
             // Handle drag-to-select text
             if (isSelectingText.value) {
               updateTextSelection(event);
@@ -2103,10 +2129,10 @@ export default {
               container,
               zoomFactor,
             );
-          });
+          };
 
           // Add separate mousemove listener for measurement tool when not drawing
-          element.addEventListener("mousemove", (event) => {
+          const mousemoveMeasureHandler = (event) => {
             // Only handle measurement tool when active but not drawing
             if (
               selectedTool.value === "measure" &&
@@ -2148,9 +2174,9 @@ export default {
                 true,
               );
             }
-          });
+          };
 
-          element.addEventListener("mouseup", (event) => {
+          const mouseupHandler = (event) => {
             // Handle drag-to-select text
             if (isSelectingText.value) {
               endTextSelection(event);
@@ -2317,10 +2343,10 @@ export default {
             }
 
             isDrawing.value = false;
-          });
+          };
 
           // Handle mouse leave to cancel drawing
-          element.addEventListener("mouseleave", () => {
+          const mouseleaveHandler = () => {
             if (isDrawing.value) {
               if (drawingOverlay) {
                 drawingOverlay.remove();
@@ -2333,6 +2359,24 @@ export default {
 
               isDrawing.value = false;
             }
+          };
+
+          element.addEventListener("mousedown", mousedownHandler);
+          element.addEventListener("mousemove", mousemoveHandler);
+          element.addEventListener("mousemove", mousemoveMeasureHandler);
+          element.addEventListener("mouseup", mouseupHandler);
+          element.addEventListener("mouseleave", mouseleaveHandler);
+
+          // Store for cleanup
+          elementEventListeners.set(element, {
+            mousedown: mousedownHandler,
+            mousemove: mousemoveHandler,
+            mousemoveMeasure: mousemoveMeasureHandler,
+            // We combine the two mousemove handlers for cleanup simplicity or store as array if needed.
+            // For simplicity in onUnmounted, we can just store the primary ones or refactor onUnmounted to handle multiple.
+            // Here we just store the main ones to match the existing cleanup logic structure.
+            mouseup: mouseupHandler,
+            mouseleave: mouseleaveHandler,
           });
         };
 
@@ -2343,14 +2387,12 @@ export default {
     };
 
     const handleFileUpload = () => {
-      console.log("handleFileUpload called");
       const rfile = file.value.files[0];
       processFile(rfile);
     };
 
     const processFile = (fileToProcess) => {
       if (!fileToProcess) {
-        console.log("No file provided");
         return;
       }
       originalFileName.value = fileToProcess.name;
@@ -2429,10 +2471,8 @@ export default {
       );
 
       if (pdfFile) {
-        console.log("PDF file dropped:", pdfFile.name);
         processFile(pdfFile);
       } else if (jsonFile) {
-        console.log("JSON config file dropped:", jsonFile.name);
         processConfigFile(jsonFile);
       } else if (files.length > 0) {
         showToast("Please drop a PDF file or JSON config file.", "warning");
@@ -2440,7 +2480,6 @@ export default {
     };
 
     const downloadPDF = async () => {
-      console.log("downloadPDF called");
       if (pdfEditor) {
         const pdfBytes = await pdfEditor.downloadPDF();
         const blob = new Blob([pdfBytes], { type: "application/pdf" });
@@ -2449,13 +2488,13 @@ export default {
         const baseName = originalFileName.value.replace(/\.pdf$/i, "");
         link.download = `${baseName}_edited.pdf`;
         link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 100);
       } else {
         console.error("PDFEditor not initialized yet");
       }
     };
 
     const downloadConfig = () => {
-      console.log("downloadConfig called");
       if (!pdfEditor || !pdfEditor.fileContents) {
         console.error("No PDF loaded or PDFEditor not initialized");
         return;
@@ -2483,12 +2522,13 @@ export default {
         // Create and download JSON file
         const jsonString = JSON.stringify(config, null, 2);
         const blob = new Blob([jsonString], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
+        link.href = url;
         link.download = `pdf-config-${new Date().toISOString().split("T")[0]}-pdfso.json`;
         link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 100);
 
-        console.log("Config downloaded successfully");
         showToast("Configuration exported successfully!", "success");
       } catch (error) {
         console.error("Error creating config file:", error);
@@ -2497,13 +2537,11 @@ export default {
     };
 
     const clickRestoreConfigInput = () => {
-      console.log("clickRestoreConfigInput called");
       configFile.value.click();
     };
 
     const processConfigFile = async (configFileToProcess) => {
       if (!configFileToProcess) {
-        console.log("No config file provided");
         return;
       }
 
@@ -2531,8 +2569,6 @@ export default {
           throw new Error("Invalid config file format");
         }
 
-        console.log("Config loaded:", config);
-
         // Clear PDF pages before loading new PDF
         clearPdfPages();
 
@@ -2600,7 +2636,6 @@ export default {
             updateToolbarPosition();
           }, 100);
 
-          console.log("Config restored successfully from dropped file");
           showToast("Configuration restored successfully!", "success");
         }
       } catch (error) {
@@ -2610,11 +2645,9 @@ export default {
     };
 
     const handleConfigRestore = async () => {
-      console.log("handleConfigRestore called");
       const configFileInput = configFile.value.files[0];
 
       if (!configFileInput) {
-        console.log("No config file selected");
         return;
       }
 
@@ -2633,8 +2666,6 @@ export default {
           throw new Error("Invalid config file format");
         }
 
-        console.log("Config loaded:", config);
-
         // Clear PDF pages before loading new PDF
         clearPdfPages();
 
@@ -2702,7 +2733,6 @@ export default {
             updateToolbarPosition();
           }, 100);
 
-          console.log("Config restored successfully");
           showToast("Configuration restored successfully!", "success");
         }
       } catch (error) {
@@ -2918,7 +2948,6 @@ export default {
     };
 
     const applyZoom = () => {
-      console.log("applyZoom called with zoomLevel:", zoomLevel.value);
       if (pdfEditor) {
         pdfEditor.applyZoom(zoomLevel.value);
         // Update toolbar position after zoom is applied
@@ -3047,7 +3076,6 @@ export default {
     };
 
     const getSvgFillColor = (operation) => {
-      console.log("getSvgFillColor called with operation:", operation);
       if (!operation.url || !operation.url.startsWith("data:image/svg+xml;base64,")) {
         return "#000000";
       }
@@ -3292,22 +3320,94 @@ export default {
       isSelectingText.value = false;
     };
 
-    onMounted(async () => {
-      console.log(`onMounted - starting`);
+    // Event Handlers for cleanup
+    const handleMouseMove = (e) => {
+      lastMousePosition.value = { x: e.clientX, y: e.clientY };
+    };
 
+    const handleLoadPdfFromLanding = (event) => {
+      const { fileData, fileName } = event.detail;
+      if (pdfEditor && fileData) {
+        if (fileName) originalFileName.value = fileName;
+        // Convert data URL to binary string
+        const base64Data = fileData.split(",")[1];
+        const binaryString = atob(base64Data);
+
+        clearPdfPages();
+        isLoaded.value = true;
+        pdfEditor.renderPDF("", binaryString).then(() => {
+          pdfEditor.applyZoom(zoomLevel.value);
+          setupCanvasDrawingListeners();
+          setTimeout(() => {
+            updateToolbarPosition();
+          }, 100);
+          isLoaded.value = true;
+          showToast(`${fileName} loaded successfully`, "success");
+        });
+      }
+    };
+
+    const handleClickOutside = (event) => {
+      const dropdown = event.target.closest(".dropdown");
+      if (!dropdown && showConfigDropdown.value) {
+        showConfigDropdown.value = false;
+      }
+    };
+
+    const cleanupTooltips = () => {
+      tooltipCleanupFns.forEach((fn) => fn());
+      tooltipCleanupFns.length = 0;
+    };
+
+    const handleResize = () => {
+      if (resizeTimeout.value) clearTimeout(resizeTimeout.value);
+      resizeTimeout.value = setTimeout(() => {
+        updateToolbarPosition();
+      }, 100);
+    };
+
+    const handleLoadPdfFromOrganizer = async (event) => {
+      const pdfData = event.detail?.pdfData;
+      if (pdfData) {
+        try {
+          // Convert ArrayBuffer to File
+          const blob = new Blob([pdfData], { type: "application/pdf" });
+          const file = new File([blob], "from_organizer.pdf", { type: "application/pdf" });
+          processFile(file);
+          showToast("PDF from Organizer loaded successfully!", "success");
+        } catch (error) {
+          console.error("Error loading PDF from Organizer:", error);
+          showToast("Error loading PDF from Organizer", "error");
+        }
+      }
+    };
+
+    let scrollTimeout = null;
+    const handleScroll = () => {
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        const bodyPdf = pdfViewContainer.value;
+        if (!bodyPdf) return;
+        const centerY = bodyPdf.scrollTop + bodyPdf.clientHeight / 2;
+        const page = pdfEditor.pdfPages.findIndex((p) => {
+          const el = p.container;
+          if (!el) return false;
+          return el.offsetTop <= centerY && el.offsetTop + el.offsetHeight >= centerY;
+        });
+        if (page !== -1) {
+          currentPage.value = page + 1;
+        }
+      }, 200);
+    };
+
+    onMounted(async () => {
       // Wait for DOM to be updated
       await nextTick();
 
       // Track mouse position for paste at cursor
-      document.addEventListener("mousemove", (e) => {
-        lastMousePosition.value = { x: e.clientX, y: e.clientY };
-      });
-
-      console.log("DOM has been updated, initializing PDFEditor...");
-      console.log("Container element (ref):", pdfViewContainer.value);
+      document.addEventListener("mousemove", handleMouseMove);
 
       if (pdfViewContainer.value) {
-        console.log("Creating PDFEditor with container:", pdfViewContainer.value);
         try {
           pdfEditor = new PDFEditor(pdfViewContainer.value);
           document.addEventListener("pdfeditor.componentSelected", uploadPropertyPanel);
@@ -3317,38 +3417,15 @@ export default {
           document.addEventListener("pdfeditor.shouldClearAllSelection", clearPropertyPanel);
           document.addEventListener("pdfeditor.editNote", handleEditNote);
           document.addEventListener("pdfeditor.editWatermark", handleEditWatermark);
-          console.log("PDFEditor initialized successfully");
         } catch (error) {
           console.error("Error creating PDFEditor:", error);
         }
       } else {
         console.error("Could not find container element!");
-        console.log("pdfViewContainer.value:", pdfViewContainer.value);
-        console.log("Available elements:", document.querySelectorAll(".body-pdf-view"));
       }
 
       // Listen for file load from landing page
-      window.addEventListener("loadPdfFromLanding", (event) => {
-        const { fileData, fileName } = event.detail;
-        if (pdfEditor && fileData) {
-          if (fileName) originalFileName.value = fileName;
-          // Convert data URL to binary string
-          const base64Data = fileData.split(",")[1];
-          const binaryString = atob(base64Data);
-
-          clearPdfPages();
-          isLoaded.value = true;
-          pdfEditor.renderPDF("", binaryString).then(() => {
-            pdfEditor.applyZoom(zoomLevel.value);
-            setupCanvasDrawingListeners();
-            setTimeout(() => {
-              updateToolbarPosition();
-            }, 100);
-            isLoaded.value = true;
-            showToast(`${fileName} loaded successfully`, "success");
-          });
-        }
-      });
+      window.addEventListener("loadPdfFromLanding", handleLoadPdfFromLanding);
 
       // Check for PDF file in sessionStorage (from landing page)
       const storedPdfFile = sessionStorage.getItem("pdfFile");
@@ -3380,12 +3457,7 @@ export default {
       setupTooltipPositioning();
 
       // Setup click outside listener for dropdown
-      document.addEventListener("click", (event) => {
-        const dropdown = event.target.closest(".dropdown");
-        if (!dropdown && showConfigDropdown.value) {
-          showConfigDropdown.value = false;
-        }
-      });
+      document.addEventListener("click", handleClickOutside);
 
       // Setup drag and drop for PDF files
       document.addEventListener("dragenter", handleDragEnter);
@@ -3397,46 +3469,13 @@ export default {
       await loadIconCache();
 
       // Setup window resize listener to update toolbar position
-      window.addEventListener("resize", () => {
-        setTimeout(() => {
-          updateToolbarPosition();
-        }, 100);
-      });
+      window.addEventListener("resize", handleResize);
 
       // Listen for PDF from Organizer
-      window.addEventListener("loadPdfFromOrganizer", async (event) => {
-        const pdfData = event.detail?.pdfData;
-        if (pdfData) {
-          try {
-            // Convert ArrayBuffer to File
-            const blob = new Blob([pdfData], { type: "application/pdf" });
-            const file = new File([blob], "from_organizer.pdf", { type: "application/pdf" });
-            processFile(file);
-            showToast("PDF from Organizer loaded successfully!", "success");
-          } catch (error) {
-            console.error("Error loading PDF from Organizer:", error);
-            showToast("Error loading PDF from Organizer", "error");
-          }
-        }
-      });
+      window.addEventListener("loadPdfFromOrganizer", handleLoadPdfFromOrganizer);
 
-      const bodyPdf = document.querySelector(".body-pdf-view");
-      if (bodyPdf) {
-        let scrollTimeout = null;
-        bodyPdf.addEventListener("scroll", () => {
-          if (scrollTimeout) clearTimeout(scrollTimeout);
-          scrollTimeout = setTimeout(() => {
-            const centerY = bodyPdf.scrollTop + bodyPdf.clientHeight / 2;
-            const page = pdfEditor.pdfPages.findIndex((p) => {
-              const el = p.container;
-              if (!el) return false;
-              return el.offsetTop <= centerY && el.offsetTop + el.offsetHeight >= centerY;
-            });
-            if (page !== -1) {
-              currentPage.value = page + 1;
-            }
-          }, 200);
-        });
+      if (pdfViewContainer.value) {
+        pdfViewContainer.value.addEventListener("scroll", handleScroll);
       }
 
       document.addEventListener("keydown", handleKeyDown);
@@ -3444,6 +3483,7 @@ export default {
     });
 
     const setupTooltipPositioning = () => {
+      cleanupTooltips();
       // Wait for DOM to be ready
       nextTick(() => {
         // Handle toolbar buttons (positioned to the right)
@@ -3455,11 +3495,16 @@ export default {
           button.removeAttribute("title");
           button.setAttribute("data-tooltip", tooltipText);
 
-          button.addEventListener("mouseenter", (e) => {
-            showCustomTooltip(e.target, tooltipText, "right");
-          });
+          const enterHandler = (e) => showCustomTooltip(e.target, tooltipText, "right");
+          const leaveHandler = hideCustomTooltip;
 
-          button.addEventListener("mouseleave", hideCustomTooltip);
+          button.addEventListener("mouseenter", enterHandler);
+          button.addEventListener("mouseleave", leaveHandler);
+
+          tooltipCleanupFns.push(() => {
+            button.removeEventListener("mouseenter", enterHandler);
+            button.removeEventListener("mouseleave", leaveHandler);
+          });
         });
 
         // Handle top bar buttons (positioned below)
@@ -3473,11 +3518,16 @@ export default {
           button.removeAttribute("title");
           button.setAttribute("data-tooltip", tooltipText);
 
-          button.addEventListener("mouseenter", (e) => {
-            showCustomTooltip(e.target, tooltipText, "below");
-          });
+          const enterHandler = (e) => showCustomTooltip(e.target, tooltipText, "below");
+          const leaveHandler = hideCustomTooltip;
 
-          button.addEventListener("mouseleave", hideCustomTooltip);
+          button.addEventListener("mouseenter", enterHandler);
+          button.addEventListener("mouseleave", leaveHandler);
+
+          tooltipCleanupFns.push(() => {
+            button.removeEventListener("mouseenter", enterHandler);
+            button.removeEventListener("mouseleave", leaveHandler);
+          });
         });
       });
     };
@@ -3549,7 +3599,6 @@ export default {
             const base64Data = btoa(svgText);
             const dataUrl = `data:image/svg+xml;base64,${base64Data}`;
             iconCache.value[iconName] = dataUrl;
-            console.log(`Cached icon: ${iconName}`);
           } else {
             console.error(`Failed to fetch icon: ${iconName} from ${url}`);
           }
@@ -3588,7 +3637,89 @@ export default {
       }
     };
 
+    const cleanupAllElementListeners = (listenerMap) => {
+      listenerMap.forEach((listeners, element) => {
+        if (element) {
+          element.removeEventListener("mousedown", listeners.mousedown);
+          element.removeEventListener("mousemove", listeners.mousemove);
+          if (listeners.mousemoveMeasure) {
+            element.removeEventListener("mousemove", listeners.mousemoveMeasure);
+          }
+          element.removeEventListener("mouseup", listeners.mouseup);
+          element.removeEventListener("mouseleave", listeners.mouseleave);
+        }
+      });
+      listenerMap.clear();
+    };
     onUnmounted(() => {
+      // Cleanup PDFEditor instance
+      if (pdfEditor && typeof pdfEditor.destroy === "function") {
+        pdfEditor.destroy();
+      }
+      pdfEditor = null;
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+      if (toast.value.timeout) clearTimeout(toast.value.timeout);
+      if (resizeTimeout.value) clearTimeout(resizeTimeout.value);
+
+      cleanupTooltips();
+
+      // Clean up element event listeners using stored handlers
+      cleanupAllElementListeners(elementEventListeners);
+
+      // Clear search matches to release DOM references
+      searchMatches.value = [];
+      currentMatchIndex.value = 0;
+
+      // Clear heavy data references
+      clipboard.value = null;
+      watermarkPreviewImage.value = null;
+      watermarkEditData.value = null;
+      watermarkPageWidth.value = 0;
+      watermarkPageHeight.value = 0;
+      if (selectRectElement.value && selectRectElement.value.parentNode) {
+        selectRectElement.value.parentNode.removeChild(selectRectElement.value);
+      }
+      selectRectElement.value = null;
+
+      if (drawingOverlay && drawingOverlay.parentNode) {
+        drawingOverlay.parentNode.removeChild(drawingOverlay);
+      }
+      drawingOverlay = null;
+
+      // Clean up freehand drawing
+      freehandDrawing.cleanup();
+
+      // Remove active tooltip if it exists
+      const activeTooltip = document.getElementById("active-tooltip");
+      if (activeTooltip) {
+        activeTooltip.remove();
+      }
+
+      document.removeEventListener("mousemove", handleMouseMove);
+
+      document.removeEventListener("pdfeditor.componentSelected", uploadPropertyPanel);
+      document.removeEventListener("pdfeditor.componentDragging", uploadPropertyPanel);
+      document.removeEventListener("pdfeditor.componentDragging", handleWatermarkDragging);
+      document.removeEventListener("pdfeditor.componentResizing", uploadPropertyPanel);
+      document.removeEventListener("pdfeditor.shouldClearAllSelection", clearPropertyPanel);
+      document.removeEventListener("pdfeditor.editNote", handleEditNote);
+      document.removeEventListener("pdfeditor.editWatermark", handleEditWatermark);
+
+      window.removeEventListener("loadPdfFromLanding", handleLoadPdfFromLanding);
+      document.removeEventListener("click", handleClickOutside);
+
+      document.removeEventListener("dragenter", handleDragEnter);
+      document.removeEventListener("dragover", handleDragOver);
+      document.removeEventListener("dragleave", handleDragLeave);
+      document.removeEventListener("drop", handleDrop);
+
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("loadPdfFromOrganizer", handleLoadPdfFromOrganizer);
+
+      if (pdfViewContainer.value) {
+        pdfViewContainer.value.removeEventListener("scroll", handleScroll);
+      }
+
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mouseup", handleDocumentMouseUp);
     });
@@ -3628,8 +3759,6 @@ export default {
         measurements: [],
         liveMeasurement: null,
       };
-
-      console.log("All measurements cleared");
     };
 
     const createMeasurementOverlay = (point1, point2, isLive = false) => {
@@ -3703,7 +3832,6 @@ export default {
     };
 
     const scrollToEditor = () => {
-      console.log("scrollToEditor called");
       const pdfEditor = document.querySelector(".pdf-editor");
       if (pdfEditor) {
         pdfEditor.scrollIntoView({
@@ -3712,8 +3840,6 @@ export default {
           inline: "center",
         });
         showToast("Focused on PDF editor", "info", 1500);
-      } else {
-        console.log("PDF editor container not found");
       }
     };
 

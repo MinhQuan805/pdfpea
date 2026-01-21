@@ -98,7 +98,7 @@
 </template>
 
 <script lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, onBeforeUnmount } from "vue";
 import BaseDialog from "./BaseDialog.vue";
 
 export default {
@@ -131,12 +131,22 @@ export default {
     const mergedPdfBytes = ref(null);
     const mergedFileName = ref("");
 
+    // Track timeout for error auto-clear
+    let errorTimeoutId = null;
+
     // Set error message with auto-clear
     const setError = (msg) => {
+      // Clear old timeout
+      if (errorTimeoutId) {
+        clearTimeout(errorTimeoutId);
+        errorTimeoutId = null;
+      }
+
       error.value = msg;
       if (msg) {
-        setTimeout(() => {
+        errorTimeoutId = setTimeout(() => {
           error.value = "";
+          errorTimeoutId = null;
         }, 3000);
       }
     };
@@ -152,6 +162,11 @@ export default {
     );
 
     const resetState = () => {
+      if (errorTimeoutId) {
+        clearTimeout(errorTimeoutId);
+        errorTimeoutId = null;
+      }
+
       pdfFiles.value = [];
       error.value = "";
       merging.value = false;
@@ -306,7 +321,18 @@ export default {
       a.download = mergedFileName.value;
       document.body.appendChild(a);
       a.click();
+
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     };
+
+    // Cleanup khi component unmount
+    onBeforeUnmount(() => {
+      if (errorTimeoutId) {
+        clearTimeout(errorTimeoutId);
+        errorTimeoutId = null;
+      }
+    });
 
     return {
       pdfFiles,

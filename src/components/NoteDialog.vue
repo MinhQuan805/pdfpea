@@ -58,6 +58,26 @@ export default {
           localAuthor.value = props.author || "User";
         }
       },
+      { immediate: true },
+    );
+
+    // Also watch text and author props for changes
+    watch(
+      () => props.text,
+      (newVal) => {
+        if (props.show) {
+          localText.value = newVal || "";
+        }
+      },
+    );
+
+    watch(
+      () => props.author,
+      (newVal) => {
+        if (props.show) {
+          localAuthor.value = newVal || "User";
+        }
+      },
     );
 
     const close = () => {

@@ -248,6 +248,7 @@ export default {
       fontOptions: CONSTANTS.FONTS,
       rotationOptions: CONSTANTS.ROTATIONS,
       positions: CONSTANTS.POSITIONS,
+      cachedPreviewUrl: null,
     };
   },
   computed: {
@@ -308,14 +309,31 @@ export default {
     },
   },
   watch: {
-    show(val) {
-      if (val)
-        this.watermarkData = this.editData
-          ? { ...CONSTANTS.DEFAULT_DATA, ...this.editData }
-          : { ...CONSTANTS.DEFAULT_DATA };
+    show: {
+      handler(val) {
+        if (val) {
+          this.watermarkData = this.editData
+            ? { ...CONSTANTS.DEFAULT_DATA, ...this.editData }
+            : { ...CONSTANTS.DEFAULT_DATA };
+        } else {
+          this.cleanupPreviewUrl();
+        }
+      },
+      immediate: true,
+    },
+    previewImage(newVal, oldVal) {
+      if (oldVal && oldVal !== newVal) {
+        this.cleanupPreviewUrl();
+      }
     },
   },
   methods: {
+    cleanupPreviewUrl() {
+      if (this.cachedPreviewUrl && this.cachedPreviewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(this.cachedPreviewUrl);
+      }
+      this.cachedPreviewUrl = null;
+    },
     closeDialog() {
       this.$emit("close");
     },
@@ -332,6 +350,7 @@ export default {
       }
       this.$emit("confirm", { ...this.watermarkData, pages });
       this.watermarkData = { ...CONSTANTS.DEFAULT_DATA };
+      this.cleanupPreviewUrl();
     },
     parsePageRange(rangeStr) {
       const pages = new Set();
