@@ -604,6 +604,26 @@
     <!-- Link Dialog Component -->
     <LinkDialog :show="showLinkDialog" @close="closeLinkDialog" @confirm="handleLinkConfirm" />
 
+    <NoteDialog
+      :show="showNoteDialog"
+      :text="editingNoteOperation ? editingNoteOperation.text : ''"
+      :author="editingNoteOperation ? editingNoteOperation.author : 'User'"
+      @close="closeNoteDialog"
+      @confirm="handleNoteConfirm"
+    />
+
+    <!-- Watermark Dialog Component -->
+    <WatermarkDialog
+      :show="showWatermarkDialog"
+      :preview-image="watermarkPreviewImage"
+      :page-width="watermarkPageWidth"
+      :page-height="watermarkPageHeight"
+      :edit-data="watermarkEditData"
+      @close="closeWatermarkDialog"
+      @confirm="handleWatermarkConfirm"
+      @delete="handleWatermarkDelete"
+    />
+
     <!-- Search Box -->
     <div v-if="showSearchBox" class="search-box">
       <div class="search-box-header">
@@ -818,6 +838,23 @@
           >
             <i class="fa-solid fa-ruler"></i>
           </div>
+
+          <div
+            class="body-tool"
+            :class="{ active: selectedTool === 'note' }"
+            @click="selectTool('note')"
+            title="Note Tool - Click to add sticky notes"
+          >
+            <i class="fa-solid fa-comment"></i>
+          </div>
+
+          <div
+            class="body-tool"
+            @click="openWatermarkDialog"
+            title="Watermark Tool - Add watermark to pages"
+          >
+            <i class="fa-solid fa-stamp"></i>
+          </div>
         </div>
 
         <!-- Icon Tools Section -->
@@ -910,10 +947,12 @@
 </template>
 
 <script lang="ts">
-import { ref, onMounted, nextTick, watch } from "vue";
+import { ref, onMounted, nextTick, watch, onUnmounted } from "vue";
 import { PDFEditor } from "./js/PDFEditor.js";
 import ImageDialog from "./components/ImageDialog.vue";
 import LinkDialog from "./components/LinkDialog.vue";
+import NoteDialog from "./components/NoteDialog.vue";
+import WatermarkDialog from "./components/WatermarkDialog.vue";
 import PaginationBar from "./components/PaginationBar.vue";
 import { freehandDrawing } from "./utils/FreehandDrawing.js";
 import { textSelection } from "./utils/TextSelection.js";
@@ -923,6 +962,8 @@ export default {
   components: {
     ImageDialog,
     LinkDialog,
+    NoteDialog,
+    WatermarkDialog,
     PaginationBar,
   },
   setup() {
@@ -1046,6 +1087,14 @@ export default {
       opacity: 0.2,
     });
 
+    // Note tool options
+    const noteOptions = ref({
+      color: "#FFFF00",
+      backgroundColor: "#FFFF88",
+      fontFamily: "Helvetica",
+      fontSize: 12,
+    });
+
     // Measurement state
     const measurementState = ref({
       isActive: false,
@@ -1062,6 +1111,19 @@ export default {
     // Link dialog state
     const showLinkDialog = ref(false);
     const pendingLinkData = ref(null);
+
+    // Note dialog state
+    const showNoteDialog = ref(false);
+    const pendingNoteData = ref(null);
+    const editingNoteOperation = ref(null);
+
+    // Watermark dialog state
+    const showWatermarkDialog = ref(false);
+    const watermarkPreviewImage = ref(null);
+    const watermarkPageWidth = ref(0);
+    const watermarkPageHeight = ref(0);
+    const editingWatermarkGroupId = ref(null);
+    const watermarkEditData = ref(null);
 
     // Config dropdown state
     const showConfigDropdown = ref(false);
@@ -1165,6 +1227,323 @@ export default {
     const closeLinkDialog = () => {
       showLinkDialog.value = false;
       pendingLinkData.value = null;
+    };
+
+    // Note dialog functions
+    const openNoteDialog = (page, id, x, y) => {
+      pendingNoteData.value = { page, id, x, y };
+      editingNoteOperation.value = null;
+      showNoteDialog.value = true;
+    };
+
+    const openEditNoteDialog = (operation) => {
+      editingNoteOperation.value = operation;
+      pendingNoteData.value = null;
+      showNoteDialog.value = true;
+    };
+
+    const handleNoteConfirm = ({ text, author }) => {
+      if (pendingNoteData.value) {
+        const { page, id, x, y } = pendingNoteData.value;
+        const settings = getToolSettings("note");
+        const size = 30;
+
+        const component = page.createComponentWithDimensions(
+          "note",
+          { ...settings, text, author },
+          id,
+          x,
+          y,
+          size,
+          size,
+        );
+        if (component) component.setSelected(true);
+      } else if (editingNoteOperation.value) {
+        editingNoteOperation.value.text = text;
+        editingNoteOperation.value.author = author;
+      }
+      closeNoteDialog();
+    };
+
+    const closeNoteDialog = () => {
+      showNoteDialog.value = false;
+      pendingNoteData.value = null;
+      editingNoteOperation.value = null;
+    };
+
+    // Watermark dialog functions
+    const openWatermarkDialog = () => {
+      if (!isLoaded.value) {
+        showToast("Please load a PDF first", "warning");
+        return;
+      }
+
+      if (pdfEditor && pdfEditor.pdfPages.length > 0) {
+        const firstPage = pdfEditor.pdfPages[0];
+        const canvas = firstPage.canvas;
+        if (canvas) {
+          watermarkPreviewImage.value = canvas.toDataURL();
+          watermarkPageWidth.value = firstPage.container.offsetWidth;
+          watermarkPageHeight.value = firstPage.container.offsetHeight;
+        }
+      }
+      showWatermarkDialog.value = true;
+      editingWatermarkGroupId.value = null;
+      watermarkEditData.value = null;
+    };
+
+    const handleWatermarkConfirm = (watermarkData) => {
+      if (!pdfEditor) return;
+
+      if (editingWatermarkGroupId.value) {
+        const groupId = editingWatermarkGroupId.value;
+        pdfEditor.pdfPages.forEach((page) => {
+          const components = page.container.getElementsByClassName("watermark-component");
+          Array.from(components).forEach((el) => {
+            if (el.component) {
+              const op = el.component.getOperation();
+              if (op.groupId === groupId) {
+                op.text = watermarkData.text;
+                op.color = watermarkData.color;
+                op.fontSize = watermarkData.size;
+                op.opacity = watermarkData.opacity / 100;
+                op.fontFamily = watermarkData.fontFamily || "Helvetica";
+                op.rotation = watermarkData.rotation || 0;
+                op.bold = watermarkData.bold;
+                op.italic = watermarkData.italic;
+                op.underline = watermarkData.underline;
+                op.alignment = watermarkData.alignment;
+
+                // Recalculate position if needed (optional, based on if user changed position setting)
+                if (watermarkData.position) {
+                  const pageWidth = page.container.offsetWidth;
+                  const pageHeight = page.container.offsetHeight;
+                  el.component.updateSize(); // Ensure size is updated
+
+                  const layout = calculateWatermarkLayout(
+                    watermarkData.text,
+                    watermarkData.size,
+                    watermarkData.fontFamily || "Helvetica",
+                    watermarkData.bold,
+                    watermarkData.italic,
+                    watermarkData.alignment,
+                    watermarkData.position,
+                    pageWidth,
+                    pageHeight,
+                  );
+                  op.x = layout.x;
+                  op.y = layout.y;
+                  op.position = watermarkData.position;
+                }
+              }
+            }
+          });
+        });
+        showToast("Watermark updated", "success");
+        closeWatermarkDialog();
+        return;
+      }
+
+      const pages =
+        watermarkData.pages === "all"
+          ? Array.from({ length: totalPages.value }, (_, i) => i + 1)
+          : watermarkData.pages;
+      const groupId = `wm-group-${Date.now()}`;
+      pages.forEach((pageNum) => {
+        if (pageNum > 0 && pageNum <= totalPages.value) {
+          const page = pdfEditor.pdfPages[pageNum - 1];
+          if (page) {
+            // Use rotation from watermarkData
+            const rotation = watermarkData.rotation || 0;
+            // Calculate positions based on position setting
+            const pageWidth = page.container.offsetWidth;
+            const pageHeight = page.container.offsetHeight;
+
+            // Calculate layout (dimensions and position) using the helper function
+            const layout = calculateWatermarkLayout(
+              watermarkData.text,
+              watermarkData.size,
+              watermarkData.fontFamily || "Helvetica",
+              watermarkData.bold,
+              watermarkData.italic,
+              watermarkData.alignment,
+              watermarkData.position,
+              pageWidth,
+              pageHeight,
+            );
+
+            const positions = [{ x: layout.x, y: layout.y }];
+            const textWidth = layout.width;
+            const textHeight = layout.height;
+
+            positions.forEach((pos, index) => {
+              // Create watermark operation
+              const id = `watermark-${Date.now()}-${pageNum}-${index}`;
+
+              const watermarkComponent = page.createComponentWithDimensions(
+                "watermark",
+                {
+                  text: watermarkData.text,
+                  color: watermarkData.color,
+                  opacity: watermarkData.opacity / 100,
+                  fontSize: watermarkData.size,
+                  fontFamily: watermarkData.fontFamily || "Helvetica",
+                  rotation: rotation,
+                  bold: watermarkData.bold,
+                  italic: watermarkData.italic,
+                  underline: watermarkData.underline,
+                  alignment: watermarkData.alignment,
+                  groupId: groupId,
+                  position: watermarkData.position,
+                },
+                id,
+                pos.x,
+                pos.y,
+                textWidth,
+                textHeight,
+              );
+            });
+          }
+        }
+      });
+
+      showToast(`Watermark added to ${pages.length} page(s)`, "success");
+      closeWatermarkDialog();
+      selectTool("hand");
+    };
+
+    // Helper function to calculate watermark dimensions and position
+    const calculateWatermarkLayout = (
+      text,
+      fontSize,
+      fontFamily,
+      bold,
+      italic,
+      alignment,
+      position,
+      pageWidth,
+      pageHeight,
+    ) => {
+      // Calculate text dimensions
+      const temp = document.createElement("div");
+      temp.style.position = "absolute";
+      temp.style.visibility = "hidden";
+      temp.style.whiteSpace = "pre-wrap";
+      temp.style.overflowWrap = "break-word";
+      temp.style.display = "inline-block";
+      temp.style.lineHeight = "1.2";
+      temp.style.fontSize = `${fontSize}px`;
+      temp.style.fontFamily = fontFamily;
+      temp.style.fontWeight = bold ? "bold" : "normal";
+      temp.style.fontStyle = italic ? "italic" : "normal";
+      temp.style.textAlign = alignment || "center";
+      temp.textContent = text || "WATERMARK";
+
+      document.body.appendChild(temp);
+      const width = Math.max(temp.offsetWidth + 8, 20);
+      const height = Math.max(temp.offsetHeight + 8, 20);
+      document.body.removeChild(temp);
+
+      // Calculate position based on dimensions
+      const positions = {
+        "top-left": { x: 0, y: 0 },
+        "top-center": { x: (pageWidth - width) / 2, y: 0 },
+        "top-right": { x: pageWidth - width - 0, y: 0 },
+        "middle-left": { x: 0, y: (pageHeight - height) / 2 },
+        center: { x: (pageWidth - width) / 2, y: (pageHeight - height) / 2 },
+        "middle-right": { x: pageWidth - width - 0, y: (pageHeight - height) / 2 },
+        "bottom-left": { x: 0, y: pageHeight - height - 0 },
+        "bottom-center": { x: (pageWidth - width) / 2, y: pageHeight - height },
+        "bottom-right": { x: pageWidth - width - 0, y: pageHeight - height },
+      };
+      const pos = positions[position] || positions["center"];
+
+      return { width, height, x: pos.x, y: pos.y };
+    };
+
+    const closeWatermarkDialog = () => {
+      showWatermarkDialog.value = false;
+      editingWatermarkGroupId.value = null;
+    };
+
+    const handleWatermarkDelete = () => {
+      if (editingWatermarkGroupId.value && pdfEditor) {
+        const groupId = editingWatermarkGroupId.value;
+        let deletedCount = 0;
+
+        pdfEditor.pdfPages.forEach((page) => {
+          const components = page.container.getElementsByClassName("watermark-component");
+          Array.from(components).forEach((el) => {
+            if (el.component) {
+              const op = el.component.getOperation();
+              if (op.groupId === groupId) {
+                el.component.deleteComponent();
+                deletedCount++;
+              }
+            }
+          });
+        });
+
+        if (deletedCount > 0) {
+          showToast("Watermark deleted", "success");
+        }
+        closeWatermarkDialog();
+      }
+    };
+
+    const openEditWatermarkDialog = (operation) => {
+      if (!isLoaded.value) return;
+      editingWatermarkGroupId.value = operation.groupId;
+
+      watermarkEditData.value = {
+        text: operation.text,
+        fontFamily: operation.fontFamily,
+        rotation: operation.rotation,
+        size: parseInt(operation.fontSize),
+        opacity: Math.round(operation.opacity * 100),
+        color: operation.color,
+        bold: operation.bold,
+        italic: operation.italic,
+        underline: operation.underline,
+        alignment: operation.alignment || "center",
+        position: operation.position || "center",
+        applyTo: "all",
+      };
+
+      if (pdfEditor && pdfEditor.pdfPages.length > 0) {
+        const firstPage = pdfEditor.pdfPages[0];
+        const canvas = firstPage.canvas;
+        if (canvas) {
+          watermarkPreviewImage.value = canvas.toDataURL();
+          watermarkPageWidth.value = firstPage.container.offsetWidth;
+          watermarkPageHeight.value = firstPage.container.offsetHeight;
+        }
+      }
+      showWatermarkDialog.value = true;
+    };
+
+    const handleWatermarkDragging = (e) => {
+      const component = e.detail.target;
+      const operation = component.getOperation();
+
+      if (operation.type !== "watermark" || !operation.groupId) return;
+
+      const { x, y, groupId } = operation;
+
+      if (pdfEditor && pdfEditor.pdfPages) {
+        pdfEditor.pdfPages.forEach((page) => {
+          const components = page.container.getElementsByClassName("watermark-component");
+          Array.from(components).forEach((el) => {
+            if (el.component && el.component !== component) {
+              const op = el.component.getOperation();
+              if (op.groupId === groupId) {
+                op.x = x;
+                op.y = y;
+              }
+            }
+          });
+        });
+      }
     };
 
     // Config dropdown functions
@@ -1296,6 +1675,13 @@ export default {
           borderWidth: linkOptions.value.borderWidth,
           opacity: linkOptions.value.opacity,
         },
+        note: {
+          text: "New Note",
+          color: noteOptions.value.color,
+          backgroundColor: noteOptions.value.backgroundColor,
+          fontFamily: noteOptions.value.fontFamily,
+          fontSize: noteOptions.value.fontSize,
+        },
       };
       return toolSettings[tool] || {};
     };
@@ -1318,6 +1704,7 @@ export default {
         textfield: "textfield",
         checkbox: "checkbox",
         link: "link",
+        note: "note",
       };
       return toolTypeMap[tool] || tool;
     };
@@ -1389,7 +1776,7 @@ export default {
                 event.stopPropagation();
                 page.setSelected();
 
-                // Drag To Select text - allow for both hand and select tools
+                // Drag To Select text
                 startTextSelection(event);
               }
               return;
@@ -1435,6 +1822,16 @@ export default {
               //if (component) {
               //  component.setSelected(true);
               //}
+              isDrawing.value = false;
+              return;
+            }
+
+            // For note tool
+            if (selectedTool.value === "note") {
+              const id = Math.random().toString(36).substring(2, 11);
+              const size = 30; // Default icon size
+
+              openNoteDialog(page, id, drawingStart.value.x, drawingStart.value.y);
               isDrawing.value = false;
               return;
             }
@@ -2782,9 +3179,20 @@ export default {
       }
     };
 
+    const handleEditNote = (e) => {
+      const operation = e.detail.target ? e.detail.target.getOperation() : e.detail?.operation;
+      if (operation) openEditNoteDialog(operation);
+    };
+
+    const handleEditWatermark = (e) => {
+      const operation = e.detail.target ? e.detail.target.getOperation() : e.detail?.operation;
+      if (operation) openEditWatermarkDialog(operation);
+    };
+
     // Text Selection Toolbar functions
     const handleDocumentMouseUp = (e) => {
-      if (selectedTool.value !== "select" && selectedTool.value !== "hand") {
+
+      if (selectedTool.value === "text") {
         return;
       }
 
@@ -2902,8 +3310,11 @@ export default {
           pdfEditor = new PDFEditor(pdfViewContainer.value);
           document.addEventListener("pdfeditor.componentSelected", uploadPropertyPanel);
           document.addEventListener("pdfeditor.componentDragging", uploadPropertyPanel);
+          document.addEventListener("pdfeditor.componentDragging", handleWatermarkDragging);
           document.addEventListener("pdfeditor.componentResizing", uploadPropertyPanel);
           document.addEventListener("pdfeditor.shouldClearAllSelection", clearPropertyPanel);
+          document.addEventListener("pdfeditor.editNote", handleEditNote);
+          document.addEventListener("pdfeditor.editWatermark", handleEditWatermark);
           console.log("PDFEditor initialized successfully");
         } catch (error) {
           console.error("Error creating PDFEditor:", error);
@@ -3173,6 +3584,11 @@ export default {
       }
     };
 
+    onUnmounted(() => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("mouseup", handleDocumentMouseUp);
+    });
+
     // Measurement utility functions
     const calculateDistance = (point1, point2) => {
       const dx = point2.x - point1.x;
@@ -3347,6 +3763,7 @@ export default {
       textOptions,
       iconOptions,
       linkOptions,
+      noteOptions,
       showImageDialog,
       pendingImageData,
       openImageDialog,
@@ -3392,6 +3809,22 @@ export default {
       goToPrevPage,
       goToNextPage,
       goToPage,
+      showNoteDialog,
+      openNoteDialog,
+      handleNoteConfirm,
+      closeNoteDialog,
+      openEditNoteDialog,
+      pendingNoteData,
+      editingNoteOperation,
+      showWatermarkDialog,
+      openWatermarkDialog,
+      watermarkPreviewImage,
+      watermarkPageWidth,
+      watermarkPageHeight,
+      handleWatermarkConfirm,
+      closeWatermarkDialog,
+      watermarkEditData,
+      handleWatermarkDelete,
       showSearchBox,
       searchQuery,
       searchMatches,
