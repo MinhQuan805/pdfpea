@@ -972,6 +972,7 @@ export default {
     const pdfViewContainer = ref(null);
     const file = ref(null);
     const configFile = ref(null);
+    const originalFileName = ref("document.pdf");
     let pdfEditor = null;
     const selectedOperation = ref(null);
     const selectedComponent = ref(null);
@@ -2352,6 +2353,7 @@ export default {
         console.log("No file provided");
         return;
       }
+      originalFileName.value = fileToProcess.name;
 
       // Check if it's a PDF file
       if (
@@ -2444,7 +2446,8 @@ export default {
         const blob = new Blob([pdfBytes], { type: "application/pdf" });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = `modified_pdf.pdf`;
+        const baseName = originalFileName.value.replace(/\.pdf$/i, "");
+        link.download = `${baseName}_edited.pdf`;
         link.click();
       } else {
         console.error("PDFEditor not initialized yet");
@@ -3328,6 +3331,7 @@ export default {
       window.addEventListener("loadPdfFromLanding", (event) => {
         const { fileData, fileName } = event.detail;
         if (pdfEditor && fileData) {
+          if (fileName) originalFileName.value = fileName;
           // Convert data URL to binary string
           const base64Data = fileData.split(",")[1];
           const binaryString = atob(base64Data);
@@ -3350,6 +3354,7 @@ export default {
       const storedPdfFile = sessionStorage.getItem("pdfFile");
       const storedFileName = sessionStorage.getItem("pdfFileName");
       if (storedPdfFile && pdfEditor) {
+        if (storedFileName) originalFileName.value = storedFileName;
         // Convert data URL to binary string
         const base64Data = storedPdfFile.split(",")[1];
         const binaryString = atob(base64Data);

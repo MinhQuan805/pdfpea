@@ -404,6 +404,8 @@ export default {
     const organizer = new PDFOrganizer();
     const pages = ref([]);
     const isLoaded = ref(false);
+    // Store the original file name for export
+    const originalFileName = ref("");
     // drag and drop state
     const draggedIndex = ref(null);
     const draggedIndices = ref([]);
@@ -494,6 +496,7 @@ export default {
         return;
       }
       if (file) {
+        originalFileName.value = file.name;
         loadPDFFile(file);
         // Reset input to allow re-uploading the same file
         fileInput.value.value = "";
@@ -514,6 +517,10 @@ export default {
         return;
       }
 
+      // Only set originalFileName if this is the first file loaded
+      if (!isLoaded.value) {
+        originalFileName.value = file.name;
+      }
       loadPDFFile(file, false);
       // Reset input to allow re-uploading the same file
       fileAppend.value.value = "";
@@ -1041,22 +1048,25 @@ export default {
 
     // Handle split action
     const handleSplit = async (splitData) => {
+      const baseName = originalFileName.value
+        ? originalFileName.value.replace(/\.pdf$/i, "")
+        : "document";
       try {
         let result;
 
         if (splitData.mode === "at-page") {
           result = await organizer.splitAtPage(splitData.splitAtPage);
           // Download two PDFs
-          downloadPDFBytes(result[0], "split-part-1.pdf");
-          downloadPDFBytes(result[1], "split-part-2.pdf");
+          downloadPDFBytes(result[0], `${baseName}_part_1.pdf`);
+          downloadPDFBytes(result[1], `${baseName}_part_2.pdf`);
         } else if (splitData.mode === "range") {
           result = await organizer.extractPageRange(splitData.rangeFrom, splitData.rangeTo);
-          downloadPDFBytes(result, `splited_pdf.pdf`);
+          downloadPDFBytes(result, `${baseName}_split.pdf`);
         } else if (splitData.mode === "every") {
           result = await organizer.splitEveryNPages(splitData.everyNPages);
           // Download multiple PDFs
           result.forEach((pdfBytes, i) => {
-            downloadPDFBytes(pdfBytes, `split-part-${i + 1}.pdf`);
+            downloadPDFBytes(pdfBytes, `${baseName}_part_${i + 1}.pdf`);
           });
         } else if (splitData.mode === "custom") {
           if (splitData.mergeRanges) {
@@ -1067,12 +1077,12 @@ export default {
               }
             });
             const pdfBytes = await organizer.exportPDF(indices);
-            downloadPDFBytes(pdfBytes, "splited_pdf.pdf");
+            downloadPDFBytes(pdfBytes, `${baseName}_split.pdf`);
           } else {
             for (let i = 0; i < splitData.customRanges.length; i++) {
               const range = splitData.customRanges[i];
               const pdfBytes = await organizer.extractPageRange(range.from, range.to);
-              downloadPDFBytes(pdfBytes, `split-part-${i + 1}.pdf`);
+              downloadPDFBytes(pdfBytes, `${baseName}_part_${i + 1}.pdf`);
             }
           }
         }
@@ -1098,8 +1108,10 @@ export default {
     const downloadFile = async () => {
       try {
         const pdfBytes = await organizer.exportPDF();
-
-        await downloadPDFBytes(pdfBytes, "organized_pdf.pdf");
+        const baseName = originalFileName.value
+          ? originalFileName.value.replace(/\.pdf$/i, "")
+          : "document";
+        await downloadPDFBytes(pdfBytes, `${baseName}_edited.pdf`);
       } catch (err) {
         console.error("Error organizing PDF:", err);
       }
@@ -1112,7 +1124,10 @@ export default {
           if (page.selected) selectedIndices.push(index);
         });
         const pdfBytes = await organizer.exportPDF(selectedIndices);
-        const filename = `organized_pdf.pdf`;
+        const baseName = originalFileName.value
+          ? originalFileName.value.replace(/\.pdf$/i, "")
+          : "document";
+        const filename = `${baseName}_selected.pdf`;
         downloadPDFBytes(pdfBytes, filename);
       } catch (err) {
         showToast("Error exporting selected pages", "error");
