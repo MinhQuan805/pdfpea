@@ -2484,7 +2484,8 @@ export default {
         const pdfBytes = await pdfEditor.downloadPDF();
         const blob = new Blob([pdfBytes], { type: "application/pdf" });
         const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
+        const url = URL.createObjectURL(blob);
+        link.href = url;
         const baseName = originalFileName.value.replace(/\.pdf$/i, "");
         link.download = `${baseName}_edited.pdf`;
         link.click();
