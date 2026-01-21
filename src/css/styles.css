@@ -430,6 +430,7 @@ body {
   position: absolute;
   cursor: move;
   overflow: hidden;
+  z-index: 10000;
 }
 
 .component.selected {
@@ -439,7 +440,8 @@ body {
 }
 
 /* Disable pointer events on components when in drawing mode */
-.body-pdf-view.drawing-mode .component:not(.selected) {
+.body-pdf-view.drawing-mode .component:not(.selected),
+.body-pdf-view.select-mode .component:not(.selected) {
   pointer-events: none;
 }
 

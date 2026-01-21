@@ -1,5 +1,12 @@
 <template>
-  <div v-if="show" class="dialog-overlay" @click="handleOverlayClick">
+  <div
+    v-if="show"
+    class="dialog-overlay"
+    @click="handleOverlayClick"
+    @dragenter.stop
+    @dragover.stop
+    @drop.stop
+  >
     <div class="dialog-container" @click.stop>
       <div class="dialog-header">
         <h3>
@@ -20,7 +27,7 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
 export default {
   name: "BaseDialog",
   props: {
