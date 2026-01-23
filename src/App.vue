@@ -4187,7 +4187,7 @@ export default {
 
 /* Search Box Styling */
 .search-box {
-  @apply fixed top-[80px] right-[20px] w-[320px] bg-white rounded-lg shadow-lg z-[1000] overflow-hidden border border-[#dee2e6];
+  @apply fixed top-20 right-5 w-80 bg-white rounded-lg shadow-lg z-1000 overflow-hidden border border-[#dee2e6];
 }
 
 .search-box-header {
@@ -4236,7 +4236,7 @@ export default {
 }
 
 .toolbar-divider {
-  @apply w-[1px] h-5 bg-[#e0e0e0] mx-1;
+  @apply w-px h-5 bg-[#e0e0e0] mx-1;
 }
 
 /* Text selection rectangle overlay */
