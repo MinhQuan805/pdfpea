@@ -366,7 +366,7 @@ export class TextSelection {
           r.x,
           conf.y,
           r.width,
-          conf.h,
+          conf.height,
         );
       }
     });
