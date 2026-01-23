@@ -174,7 +174,7 @@ class PDFPage {
 
       // Use the same scale as display to match canvas display size
       const textContent = await page.getTextContent();
-      const textLayerViewport = page.getViewport({ scale: 1 });
+      const textLayerViewport = page.getViewport({ scale });
       const textLayer = new pdfjsLib.TextLayer({
         textContentSource: textContent,
         container: textLayerDiv,

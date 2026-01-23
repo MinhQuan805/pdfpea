@@ -335,14 +335,35 @@ export default {
     },
     parsePageRange(rangeStr) {
       const pages = new Set();
+      if (!rangeStr || typeof rangeStr !== "string") {
+        return [];
+      }
       rangeStr.split(",").forEach((part) => {
         const trimmed = part.trim();
+        if (!trimmed) return;
         if (trimmed.includes("-")) {
-          const [start, end] = trimmed.split("-").map((n) => parseInt(n.trim()));
-          if (!isNaN(start) && !isNaN(end)) for (let i = start; i <= end; i++) pages.add(i);
+          const [rawStart, rawEnd] = trimmed.split("-");
+          const start = parseInt(rawStart.trim(), 10);
+          const end = parseInt(rawEnd.trim(), 10);
+          if (Number.isNaN(start) || Number.isNaN(end)) {
+            return;
+          }
+          const min = Math.min(start, end);
+          const max = Math.max(start, end);
+          const rangeStart = Math.max(1, min);
+          const rangeEnd = this.totalPages ? Math.min(this.totalPages, max) : max;
+          if (rangeStart > rangeEnd) {
+            return;
+          }
+          for (let i = rangeStart; i <= rangeEnd; i++) {
+            pages.add(i);
+          }
         } else {
-          const page = parseInt(trimmed);
-          if (!isNaN(page)) pages.add(page);
+          const page = parseInt(trimmed, 10);
+          if (Number.isNaN(page)) return;
+          if (page < 1) return;
+          if (this.totalPages && page > this.totalPages) return;
+          pages.add(page);
         }
       });
       return Array.from(pages).sort((a, b) => a - b);
