@@ -120,11 +120,9 @@ export class TextSelection {
         console.warn("Clipboard API is not available.");
         return false;
       }
-      navigator.clipboard
-        .writeText(text)
-        .catch((err) => {
-          console.error("Failed to write text to clipboard:", err);
-        });
+      navigator.clipboard.writeText(text).catch((err) => {
+        console.error("Failed to write text to clipboard:", err);
+      });
       const selection = window.getSelection();
       if (selection) {
         selection.removeAllRanges();
