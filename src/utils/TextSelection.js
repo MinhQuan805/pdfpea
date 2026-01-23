@@ -92,7 +92,7 @@ export class TextSelection {
 
     const range = sel.getRangeAt(0);
     const container =
-      range.commonAncestorContainer.nodeType === 3
+      range.commonAncestorContainer.nodeType === Node.TEXT_NODE
         ? range.commonAncestorContainer.parentNode
         : range.commonAncestorContainer;
 
@@ -124,7 +124,7 @@ export class TextSelection {
 
     const range = this.currentSelectionRange;
     const container =
-      range.commonAncestorContainer.nodeType === 3
+      range.commonAncestorContainer.nodeType === Node.TEXT_NODE
         ? range.commonAncestorContainer.parentNode
         : range.commonAncestorContainer;
     const pageEl = container.closest(".pdf-page");
