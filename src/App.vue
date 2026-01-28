@@ -1158,7 +1158,7 @@ export default {
     const selectStartPos = ref({ x: 0, y: 0 });
     const selectCurrentPos = ref({ x: 0, y: 0 });
     const selectRectElement = ref(null);
-    const tooltipCleanupFns = [];
+    const tooltipCleanupFns = ref([]);
     const resizeTimeout = ref(null);
 
     // Image dialog functions - simplified
