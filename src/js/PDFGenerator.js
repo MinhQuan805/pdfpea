@@ -224,7 +224,6 @@ class PDFGenerator {
     const operationPageHeight = pdfPage.getHeight();
     const { x: pageX, y: pageY } = pdfPage.getCropBox() || pdfPage.getMediaBox();
 
-    const xPadding = operation.xPadding || 0;
     const text = operation.text.replaceAll("\n\n", "\n \n");
     const x = operation.x;
     const y = operation.y;
