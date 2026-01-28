@@ -224,7 +224,6 @@ class PDFGenerator {
     const operationPageHeight = pdfPage.getHeight();
     const { x: pageX, y: pageY } = pdfPage.getCropBox() || pdfPage.getMediaBox();
 
-    const xPadding = operation.xPadding || 0;
     const text = operation.text.replaceAll("\n\n", "\n \n");
     const x = operation.x;
     const y = operation.y;
@@ -232,7 +231,6 @@ class PDFGenerator {
     const fontSize = parseInt(operation.fontSize);
     const fontColor = PDFGenerator.hexToRgb(operation.color);
     const fontLineHeight = operation.fontSize * (operation.lineHeight || 1.2);
-    const fontWordBreak = operation.wordBreak || "break-all";
     const width = operation.width;
     const height = operation.height || fontSize;
     const opacity = parseFloat(operation.opacity, 10);

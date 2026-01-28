@@ -114,9 +114,24 @@ export class TextSelection {
 
   copyText() {
     if (!this.currentSelectionRange) return false;
-    navigator.clipboard.writeText(this.currentSelectionRange.toString());
-    window.getSelection().removeAllRanges();
-    return true;
+    try {
+      const text = this.currentSelectionRange.toString();
+      if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") {
+        console.warn("Clipboard API is not available.");
+        return false;
+      }
+      navigator.clipboard.writeText(text).catch((err) => {
+        console.error("Failed to write text to clipboard:", err);
+      });
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+      }
+      return true;
+    } catch (e) {
+      console.error("Error copying text:", e);
+      return false;
+    }
   }
 
   applyAction(actionType, pdfEditor, zoom, callbacks = {}) {
@@ -299,7 +314,7 @@ export class TextSelection {
         if (verticalOverlap > minH * 0.5) {
           // Check horizontal adjacency
           const gap = Math.max(rect.x, exist.x) - Math.min(rect.right, exist.right);
-          if (gap < 2) {
+          if (gap <= 0 || gap < 2) {
             exist.x = Math.min(rect.x, exist.x);
             exist.y = Math.min(rect.y, exist.y);
             exist.right = Math.max(rect.right, exist.right);
@@ -349,7 +364,7 @@ export class TextSelection {
           r.x,
           conf.y,
           r.width,
-          conf.h,
+          conf.height,
         );
       }
     });

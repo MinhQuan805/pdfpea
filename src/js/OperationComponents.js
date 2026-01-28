@@ -977,16 +977,41 @@ class NoteOperationComponent extends BasicOperationComponent {
       color = "#FFFF00",
     } = op;
 
-    this.tooltip.innerHTML = `
-      <div style="padding: 5px; border-bottom: 1px solid rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; font-weight: bold;">
-        <span><i class="fa-regular fa-comment-alt"></i> Note</span>
-        <span style="font-weight: normal; font-size: 0.9em;">${new Date().toLocaleString()}</span>
-      </div>
-      <div style="padding: 5px 10px 2px 10px; font-weight: bold;">
-        <span>${author}</span>
-      </div>
-      <div style="padding: 2px 10px 10px 10px; min-height: 50px; white-space: pre-wrap;">${text}</div>
-    `;
+    // Clear existing content
+    this.tooltip.innerHTML = "";
+    // Header with static icon and dynamic timestamp
+    const header = document.createElement("div");
+    header.style.padding = "5px";
+    header.style.borderBottom = "1px solid rgba(0,0,0,0.1)";
+    header.style.display = "flex";
+    header.style.justifyContent = "space-between";
+    header.style.alignItems = "center";
+    header.style.fontWeight = "bold";
+    const headerLeft = document.createElement("span");
+    // Static markup; no user-controlled data here.
+    headerLeft.innerHTML = '<i class="fa-regular fa-comment-alt"></i> Note';
+    const headerRight = document.createElement("span");
+    headerRight.style.fontWeight = "normal";
+    headerRight.style.fontSize = "0.9em";
+    headerRight.textContent = new Date().toLocaleString();
+    header.appendChild(headerLeft);
+    header.appendChild(headerRight);
+    // Author section
+    const authorDiv = document.createElement("div");
+    authorDiv.style.padding = "5px 10px 2px 10px";
+    authorDiv.style.fontWeight = "bold";
+    const authorSpan = document.createElement("span");
+    authorSpan.textContent = author;
+    authorDiv.appendChild(authorSpan);
+    // Text section
+    const textDiv = document.createElement("div");
+    textDiv.style.padding = "2px 10px 10px 10px";
+    textDiv.style.minHeight = "50px";
+    textDiv.style.whiteSpace = "pre-wrap";
+    textDiv.textContent = text;
+    this.tooltip.appendChild(header);
+    this.tooltip.appendChild(authorDiv);
+    this.tooltip.appendChild(textDiv);
 
     Object.assign(this.tooltip.style, {
       backgroundColor,
@@ -1133,12 +1158,11 @@ class WatermarkOperationComponent extends BasicOperationComponent {
       this.fireEvent("pdfeditor.componentDragging");
     });
 
-    this.wrapperContainer.moveable.on("rotate", ({ target, transform }) => {
+    this.wrapperContainer.moveable.on("rotate", ({ target, transform, rotation }) => {
       target.style.transform = transform;
-      // Extract rotation angle from transform
-      const match = transform.match(/rotate\(([^)]+)\)/);
-      if (match) {
-        this.operation.rotation = parseFloat(match[1]);
+      // Store rotation angle directly from the event to avoid parsing the transform string
+      if (typeof rotation === "number") {
+        this.operation.rotation = rotation;
       }
     });
 
