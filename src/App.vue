@@ -1158,8 +1158,9 @@ export default {
     const selectStartPos = ref({ x: 0, y: 0 });
     const selectCurrentPos = ref({ x: 0, y: 0 });
     const selectRectElement = ref(null);
-    const tooltipCleanupFns = [];
+    const tooltipCleanupFns = ref([]);
     const resizeTimeout = ref(null);
+    const scrollTimeout = ref(null);
 
     // Image dialog functions - simplified
     const openImageDialog = (page, id, x, y, width, height) => {
@@ -2484,12 +2485,11 @@ export default {
         const pdfBytes = await pdfEditor.downloadPDF();
         const blob = new Blob([pdfBytes], { type: "application/pdf" });
         const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.href = url;
+        link.href = URL.createObjectURL(blob);
         const baseName = originalFileName.value.replace(/\.pdf$/i, "");
         link.download = `${baseName}_edited.pdf`;
         link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 100);
+        setTimeout(() => URL.revokeObjectURL(link.href), 100);
       } else {
         console.error("PDFEditor not initialized yet");
       }
@@ -2841,7 +2841,7 @@ export default {
       // Apply highlights to each element
       matchesByElement.forEach((matches, element) => {
         const text = element.textContent;
-        let html = "";
+        const fragment = document.createDocumentFragment();
         let lastIndex = 0;
 
         // Sort matches by start index
@@ -2849,7 +2849,10 @@ export default {
 
         matches.forEach((match) => {
           // Add text before the match
-          html += escapeHtml(text.substring(lastIndex, match.startIndex));
+          if (lastIndex < match.startIndex) {
+            const textNode = document.createTextNode(text.substring(lastIndex, match.startIndex));
+            fragment.appendChild(textNode);
+          }
 
           // Add highlighted match
           const matched = text.substring(match.startIndex, match.startIndex + match.length);
@@ -2857,15 +2860,27 @@ export default {
           const bgColor = isCurrent ? "#ff9800" : "#ffeb3b";
           const className = isCurrent ? "search-highlight-current" : "search-highlight";
 
-          html += `<mark class="${className}" style="background-color: ${bgColor}; color: #000; padding: 0; border-radius: 1px;">${escapeHtml(matched)}</mark>`;
+          const mark = document.createElement("mark");
+          mark.className = className;
+          mark.style.backgroundColor = bgColor;
+          mark.style.color = "#000";
+          mark.style.padding = "0";
+          mark.style.borderRadius = "1px";
+          mark.textContent = matched;
+          fragment.appendChild(mark);
 
           lastIndex = match.startIndex + match.length;
         });
 
         // Add remaining text
-        html += escapeHtml(text.substring(lastIndex));
+        if (lastIndex < text.length) {
+          const textNode = document.createTextNode(text.substring(lastIndex));
+          fragment.appendChild(textNode);
+        }
 
-        element.innerHTML = html;
+        // Clear and append new content
+        element.textContent = "";
+        element.appendChild(fragment);
       });
 
       // Scroll to current match
@@ -3383,10 +3398,9 @@ export default {
       }
     };
 
-    let scrollTimeout = null;
     const handleScroll = () => {
-      if (scrollTimeout) clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(() => {
+      if (scrollTimeout.value) clearTimeout(scrollTimeout.value);
+      scrollTimeout.value = setTimeout(() => {
         const bodyPdf = pdfViewContainer.value;
         if (!bodyPdf) return;
         const centerY = bodyPdf.scrollTop + bodyPdf.clientHeight / 2;
@@ -3641,13 +3655,21 @@ export default {
     const cleanupAllElementListeners = (listenerMap) => {
       listenerMap.forEach((listeners, element) => {
         if (element) {
-          element.removeEventListener("mousedown", listeners.mousedown);
-          element.removeEventListener("mousemove", listeners.mousemove);
+          if (listeners.mousedown) {
+            element.removeEventListener("mousedown", listeners.mousedown);
+          }
+          if (listeners.mousemove) {
+            element.removeEventListener("mousemove", listeners.mousemove);
+          }
           if (listeners.mousemoveMeasure) {
             element.removeEventListener("mousemove", listeners.mousemoveMeasure);
           }
-          element.removeEventListener("mouseup", listeners.mouseup);
-          element.removeEventListener("mouseleave", listeners.mouseleave);
+          if (listeners.mouseup) {
+            element.removeEventListener("mouseup", listeners.mouseup);
+          }
+          if (listeners.mouseleave) {
+            element.removeEventListener("mouseleave", listeners.mouseleave);
+          }
         }
       });
       listenerMap.clear();
@@ -3658,7 +3680,7 @@ export default {
         pdfEditor.destroy();
       }
       pdfEditor = null;
-      if (scrollTimeout) clearTimeout(scrollTimeout);
+      if (scrollTimeout.value) clearTimeout(scrollTimeout.value);
       if (toast.value.timeout) clearTimeout(toast.value.timeout);
       if (resizeTimeout.value) clearTimeout(resizeTimeout.value);
 

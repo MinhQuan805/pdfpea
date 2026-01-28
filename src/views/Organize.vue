@@ -402,6 +402,7 @@ export default {
     const fileAppend = ref(null);
     const organizer = new PDFOrganizer();
     const isComponentMounted = ref(true);
+    const loadAbortController = ref(null);
     const pages = shallowRef([]);
     const isLoaded = ref(false);
     // Store the original file name for export
@@ -533,6 +534,13 @@ export default {
         return;
       }
 
+      // Cancel previous operation if any
+      if (loadAbortController.value) {
+        loadAbortController.value.abort();
+      }
+      loadAbortController.value = new AbortController();
+      const signal = loadAbortController.value.signal;
+
       // Clean up old refs if resetting
       if (reset) {
         for (const key in pageCanvasRefs) {
@@ -542,7 +550,9 @@ export default {
 
       try {
         const result = await organizer.loadPDFFile(file, reset);
-        if (!isComponentMounted.value) return;
+
+        if (signal.aborted) return;
+
         // Update pages with reactivity trigger
         pages.value = [...result.pages];
         isLoaded.value = true;
@@ -552,14 +562,20 @@ export default {
 
         // Render only the newly added pages
         for (let i = result.startId; i < result.endId; i++) {
-          if (!isComponentMounted.value) break;
+          if (signal.aborted) break;
           const pageIndex = pages.value.findIndex((p) => p.id === i);
           if (pageIndex !== -1) {
             await renderPage(pageIndex);
           }
         }
       } catch (err) {
-        showToast("Error loading PDF");
+        if (!signal.aborted) {
+          showToast("Error loading PDF");
+        }
+      } finally {
+        if (loadAbortController.value && loadAbortController.value.signal === signal) {
+          loadAbortController.value = null;
+        }
       }
     };
 
@@ -1137,9 +1153,7 @@ export default {
       await nextTick();
       link.click();
       document.body.removeChild(link);
-      setTimeout(() => {
-        URL.revokeObjectURL(url);
-      }, 100);
+      URL.revokeObjectURL(url);
     };
     // Download PDF
     const downloadFile = async () => {
@@ -1242,6 +1256,10 @@ export default {
       document.removeEventListener("click", handleGlobalClick);
       clearAutoScroll();
       isComponentMounted.value = false;
+
+      if (loadAbortController.value) {
+        loadAbortController.value.abort();
+      }
 
       if (toast.value.timeout) {
         clearTimeout(toast.value.timeout);

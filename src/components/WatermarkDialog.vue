@@ -199,9 +199,10 @@ const CONSTANTS = {
     { value: 0, label: "Do not rotate" },
     { value: 45, label: "45 degrees" },
     { value: 90, label: "90 degrees" },
-    { value: 315, label: "135 degrees" },
+    { value: 135, label: "135 degrees" },
     { value: 180, label: "180 degrees" },
     { value: 270, label: "270 degrees" },
+    { value: 315, label: "315 degrees" },
   ],
   POSITIONS: [
     { value: "top-left", label: "Top Left" },
@@ -248,7 +249,6 @@ export default {
       fontOptions: CONSTANTS.FONTS,
       rotationOptions: CONSTANTS.ROTATIONS,
       positions: CONSTANTS.POSITIONS,
-      cachedPreviewUrl: null,
     };
   },
   computed: {
@@ -315,25 +315,12 @@ export default {
           this.watermarkData = this.editData
             ? { ...CONSTANTS.DEFAULT_DATA, ...this.editData }
             : { ...CONSTANTS.DEFAULT_DATA };
-        } else {
-          this.cleanupPreviewUrl();
         }
       },
       immediate: true,
     },
-    previewImage(newVal, oldVal) {
-      if (oldVal && oldVal !== newVal) {
-        this.cleanupPreviewUrl();
-      }
-    },
   },
   methods: {
-    cleanupPreviewUrl() {
-      if (this.cachedPreviewUrl && this.cachedPreviewUrl.startsWith("blob:")) {
-        URL.revokeObjectURL(this.cachedPreviewUrl);
-      }
-      this.cachedPreviewUrl = null;
-    },
     closeDialog() {
       this.$emit("close");
     },
@@ -350,7 +337,6 @@ export default {
       }
       this.$emit("confirm", { ...this.watermarkData, pages });
       this.watermarkData = { ...CONSTANTS.DEFAULT_DATA };
-      this.cleanupPreviewUrl();
     },
     parsePageRange(rangeStr) {
       const pages = new Set();
